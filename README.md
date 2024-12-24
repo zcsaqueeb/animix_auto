@@ -2,6 +2,7 @@
 <h1 align="center">Animix Bot</h1>
 
 <p align="center">Automasi tugas pada Animix untuk meningkatkan efisiensi dan hasil Anda!</p>
+
 ---
 
 ## 🚀 **Tentang Bot**
