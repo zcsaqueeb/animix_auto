@@ -48,7 +48,7 @@ Mulai gunakan Animix dengan mendaftar melalui tautan berikut:
 
 ---
 
-## ⚙️ **Pengaturan di \*\***`config.json`\*\*
+## ⚙️ **Pengaturan di **`config.json`**
 
 | **Fungsi**              | **Deskripsi**                             | **Default** |
 | ----------------------- | ----------------------------------------- | ----------- |
