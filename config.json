@@ -1,0 +1,10 @@
+{
+  "gacha": true,
+  "achievements": true,
+  "mix": true,
+  "mission": true,
+  "quest": true,
+  "claim_pass": true,
+  "delay_loop": 3000,
+  "delay_pergantian_akun": 10
+}
