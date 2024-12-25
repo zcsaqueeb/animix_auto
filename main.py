@@ -35,7 +35,7 @@ class animix:
             print("     Channel: t.me/livexordsscript")
 
     def log(self, message, color=Fore.RESET):
-            print(Fore.LIGHTBLACK_EX + datetime.now().strftime("[%Y:%m:%d:%H:%M:%S] |") + " " + color + message + Fore.RESET)
+            print(Fore.LIGHTBLACK_EX + datetime.now().strftime("[%Y:%m:%d ~ %H:%M:%S] |") + " " + color + message + Fore.RESET)
 
     def load_config(self):
             """Membaca konfigurasi dari file config.json"""
@@ -387,36 +387,48 @@ class animix:
                     for i in range(1, 4)
                 ]
 
-                pet_ids = []
-                for req in required_pets:
-                    for pet in pets:
-                        if (
-                            pet.get("class") == req["class"]
-                            and pet.get("star", 0) >= req["star"]
-                            and pet.get("id") not in pet_ids
-                        ):
-                            pet_ids.append(pet["pet_id"])
+                available_pets = pets.copy()  
+                while True:
+                    pet_ids = []
+                    for req in required_pets:
+                        for pet in available_pets:
+                            if (
+                                pet.get("class") == req["class"]
+                                and pet.get("star", 0) >= req["star"]
+                                and pet.get("id") not in pet_ids
+                            ):
+                                pet_ids.append(pet["pet_id"])
+                                available_pets.remove(pet) 
+                                break
+
+                    if len(pet_ids) == 3:
+                        self.log(f"➡️ Mengirim pet ke misi {mission.get('mission_id')}...", Fore.CYAN)
+
+                        enter_url = f"{self.BASE_URL}mission/enter"
+                        payload = {
+                            "mission_id": mission.get("mission_id"),  
+                            **{f"pet_{i+1}_id": pet_id for i, pet_id in enumerate(pet_ids)}  
+                        }
+                        enter_response = requests.post(enter_url, headers=headers, json=payload)
+
+                        if enter_response.status_code == 200:
+                            self.log(f"✅ Misi {mission.get('mission_id')} berhasil dijalankan", Fore.GREEN)
                             break
+                        else:
+                            self.log(
+                                f"❌ Gagal menjalankan misi {mission.get('mission_id')} (Error: {enter_response.status_code})",
+                                Fore.RED,
+                            )
+                            self.log(f"🔍 Detail respons menjalankan misi: {enter_response.text}", Fore.RED)
 
-                if len(pet_ids) == 3:
-                    self.log(f"➡️ Mengirim pet ke misi {mission.get('mission_id')}...", Fore.CYAN)
-
-                    enter_url = f"{self.BASE_URL}mission/enter"
-                    payload = {
-                        "mission_id": mission.get("mission_id"),  
-                        **{f"pet_{i+1}_id": pet_id for i, pet_id in enumerate(pet_ids)}  
-                    }
-                    enter_response = requests.post(enter_url, headers=headers, json=payload)
-
-                    if enter_response.status_code == 200:
-                        self.log(f"✅ Misi {mission.get('mission_id')} berhasil dijalankan", Fore.GREEN)
+                            if "PET_BUSY" in enter_response.text:
+                                self.log(f"🔄 Mencoba ulang dengan pet lain untuk misi {mission.get('mission_id')}...", Fore.YELLOW)
+                                continue 
+                            else:
+                                break  
                     else:
-                        self.log(
-                            f"❌ Gagal menjalankan misi {mission.get('mission_id')} (Error: {enter_response.status_code})",
-                            Fore.RED,
-                        )
-                else:
-                    self.log(f"❌ Misi {mission.get('mission_id')} tidak memenuhi syarat pet", Fore.RED)
+                        self.log(f"❌ Misi {mission.get('mission_id')} tidak memenuhi syarat pet", Fore.RED)
+                        break  
 
         except requests.exceptions.RequestException as e:
             self.log(f"❌ Terjadi kesalahan saat memproses: {e}", Fore.RED)

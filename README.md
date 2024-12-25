@@ -21,7 +21,10 @@ Dengan bot ini, Anda dapat menghemat waktu sekaligus memaksimalkan hasil tanpa p
 
 ---
 
-## 🌟 **Versi v1.0.0**
+## 🌟 **Versi v1.0.1**
+
+## **Update**
+1. **Fixed** Membenahi BUG pada pengiriman mission
 
 ### **Fitur pada Versi Ini**:
 
@@ -48,7 +51,7 @@ Mulai gunakan Animix dengan mendaftar melalui tautan berikut:
 
 ---
 
-## ⚙️ **Pengaturan di **`config.json`**
+## ⚙️ **Pengaturan di **`config.json`\*\*
 
 | **Fungsi**              | **Deskripsi**                             | **Default** |
 | ----------------------- | ----------------------------------------- | ----------- |
