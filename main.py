@@ -180,7 +180,7 @@ class animix:
     def mix(self) -> None:
         dad_ids = [] 
         mom_ids = [] 
-        req_url = f"{self.BASE_URL}pet/dna/list"  
+        req_url = f"{self.BASE_URL}pet/dna/list/all"  
         headers = {**self.HEADERS, "Tg-Init-Data": self.token}
 
         self.log("\U0001F50D Mengambil daftar DNA...", Fore.CYAN)
@@ -192,14 +192,14 @@ class animix:
 
             if "result" in data and isinstance(data["result"], list):
                 for dna in data["result"]:
-                    item_id = dna.get("item_id")
-                    if item_id:
+                    dna_id = dna.get("dna_id")
+                    if dna_id:
                         if dna.get("can_mom"):
-                            mom_ids.append(item_id)
-                            self.log(f"\u2705 DNA Mom ditemukan: {dna['name']} (ID: {item_id})", Fore.GREEN)
+                            mom_ids.append(dna_id)
+                            self.log(f"\u2705 DNA Mom ditemukan: {dna['name']} (ID: {dna_id})", Fore.GREEN)
                         else:
-                            dad_ids.append(item_id)
-                            self.log(f"\u2705 DNA Dad ditemukan: {dna['name']} (ID: {item_id})", Fore.GREEN)
+                            dad_ids.append(dna_id)
+                            self.log(f"\u2705 DNA Dad ditemukan: {dna['name']} (ID: {dna_id})", Fore.GREEN)
             else:
                 self.log("\u26A0\uFE0F Tidak ada DNA ditemukan dalam respons.", Fore.YELLOW)
 

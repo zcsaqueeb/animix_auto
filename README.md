@@ -2,7 +2,6 @@
 <h1 align="center">Animix Bot</h1>
 
 <p align="center">Automasi tugas pada Animix untuk meningkatkan efisiensi dan hasil Anda!</p>
-
 ---
 
 ## 🚀 **Tentang Bot**
@@ -21,10 +20,11 @@ Dengan bot ini, Anda dapat menghemat waktu sekaligus memaksimalkan hasil tanpa p
 
 ---
 
-## 🌟 **Versi v1.0.1**
+## 🌟 **Versi v1.0.2**
 
 ## **Update**
-1. **Fixed** Membenahi BUG pada pengiriman mission
+
+1. **Fixed** Membenahi BUG pada mix dna
 
 ### **Fitur pada Versi Ini**:
 
