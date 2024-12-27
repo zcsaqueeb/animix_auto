@@ -6,7 +6,7 @@ import requests
 
 
 class animix:
-    
+
     BASE_URL = "https://pro-api.animix.tech/public/"
     HEADERS = {
         "accept": "*/*",
@@ -21,99 +21,158 @@ class animix:
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "cross-site",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0" 
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
     }
-    
+
     def __init__(self):
         self.query_list = self.load_query("query.txt")
         self.token = None
         self.gacha_point = 0
 
-    def banner(self):
-            print("     Animix Free Bot")
-            print("     This Bot Created By LIVEXORDS\n")
-            print("     Channel: t.me/livexordsscript")
+    def banner(self) -> None:
+        """Displays the banner for the bot."""
+        self.log("🎉 Animix Free Bot", Fore.CYAN)
+        self.log("🚀 Created by LIVEXORDS", Fore.CYAN)
+        self.log("📢 Channel: t.me/livexordsscript\n", Fore.CYAN)
 
     def log(self, message, color=Fore.RESET):
-            print(Fore.LIGHTBLACK_EX + datetime.now().strftime("[%Y:%m:%d ~ %H:%M:%S] |") + " " + color + message + Fore.RESET)
+        print(
+            Fore.LIGHTBLACK_EX
+            + datetime.now().strftime("[%Y:%m:%d ~ %H:%M:%S] |")
+            + " "
+            + color
+            + message
+            + Fore.RESET
+        )
 
-    def load_config(self):
-            """Membaca konfigurasi dari file config.json"""
-            try:
-                with open("config.json", "r") as config_file:
-                    config_data = json.load(config_file)
-                    return config_data
-            except FileNotFoundError:
-                print("File config.json tidak ditemukan!")
-                return {}
-            except json.JSONDecodeError:
-                print("Terjadi kesalahan dalam membaca config.json!")
-                return {}
+    def load_config(self) -> dict:
+        """Loads configuration from config.json."""
+        try:
+            with open("config.json", "r") as config_file:
+                return json.load(config_file)
+        except FileNotFoundError:
+            self.log("❌ File config.json not found!", Fore.RED)
+            return {}
+        except json.JSONDecodeError:
+            self.log("❌ Error reading config.json!", Fore.RED)
+            return {}
 
-    def load_query(self, path_file="query.txt"):
-            self.banner()
-            
-            try:
-                with open(path_file, 'r') as file:
-                    queries = [line.strip() for line in file if line.strip()]    
-                
-                if not queries:
-                    self.log(f"Warning: {path_file} is empty.", Fore.YELLOW)
-                
-                self.log(f"Data Load : {len(queries)} queries loaded.", Fore.GREEN)
-                return queries
+    def load_query(self, path_file="query.txt") -> list:
+        self.banner()
 
-            except FileNotFoundError:
-                self.log(f"File not found: {path_file}", Fore.RED)
-                return []
-            except Exception as e:
-                self.log(f"Error while loading queries from file: {e}", Fore.RED)
-                return []
+        try:
+            with open(path_file, "r") as file:
+                queries = [line.strip() for line in file if line.strip()]
+
+            if not queries:
+                self.log(f"⚠️ Warning: {path_file} is empty.", Fore.YELLOW)
+
+            self.log(f"✅ Loaded: {len(queries)} queries.", Fore.GREEN)
+            return queries
+
+        except FileNotFoundError:
+            self.log(f"❌ File not found: {path_file}", Fore.RED)
+            return []
+        except Exception as e:
+            self.log(f"❌ Error loading queries: {e}", Fore.RED)
+            return []
 
     def login(self, index: int) -> None:
-        self.log("🔐 Mencoba login...", Fore.GREEN)
+        self.log("🔐 Attempting to log in...", Fore.GREEN)
 
         if index >= len(self.query_list):
-            self.log("❌ Indeks login tidak valid. Silakan cek kembali.", Fore.RED)
+            self.log("❌ Invalid login index. Please check again.", Fore.RED)
             return
 
         req_url = f"{self.BASE_URL}user/info"
         token = self.query_list[index]
 
-        self.log(f"📋 Token yang digunakan: {token[:10]}... (dipotong untuk keamanan)", Fore.CYAN)
+        self.log(
+            f"📋 Using token: {token[:10]}... (truncated for security)",
+            Fore.CYAN,
+        )
 
         headers = {**self.HEADERS, "Tg-Init-Data": token}
 
         try:
-            self.log("📡 Mengirim permintaan untuk mendapatkan informasi pengguna...", Fore.CYAN)
+            self.log(
+                "📡 Sending request to fetch user information...",
+                Fore.CYAN,
+            )
             response = requests.get(req_url, headers=headers)
             response.raise_for_status()
             data = response.json()
 
             if "result" in data:
                 user_info = data["result"]
-                username = user_info.get("telegram_username", "Tidak diketahui")
+                username = user_info.get("telegram_username", "Unknown")
                 gacha_point = user_info.get("god_power", 0)
 
-                self.gacha_point = int(gacha_point) if isinstance(gacha_point, (int, str)) and str(gacha_point).isdigit() else 0
+                self.gacha_point = (
+                    int(gacha_point)
+                    if isinstance(gacha_point, (int, str))
+                    and str(gacha_point).isdigit()
+                    else 0
+                )
                 self.token = token
 
-                self.log("✅ Login berhasil!", Fore.GREEN)
+                self.log("✅ Login successful!", Fore.GREEN)
                 self.log(f"👤 Username: {username}", Fore.LIGHTGREEN_EX)
-                self.log(f"💎 Point Gacha: {self.gacha_point}", Fore.CYAN)
+                self.log(f"💎 Gacha Points: {self.gacha_point}", Fore.CYAN)
             else:
-                self.log("⚠️ Respons tidak sesuai struktur yang diharapkan.", Fore.YELLOW)
+                self.log(
+                    "⚠️ Unexpected response structure.", Fore.YELLOW
+                )
 
         except requests.exceptions.RequestException as e:
-            self.log(f"❌ Gagal mengirim permintaan login: {e}", Fore.RED)
+            self.log(f"❌ Failed to send login request: {e}", Fore.RED)
         except ValueError as e:
-            self.log(f"❌ Data error (kemungkinan JSON): {e}", Fore.RED)
+            self.log(f"❌ Data error (possible JSON issue): {e}", Fore.RED)
         except KeyError as e:
-            self.log(f"❌ Kesalahan key: {e}", Fore.RED)
+            self.log(f"❌ Key error: {e}", Fore.RED)
         except Exception as e:
-            self.log(f"❌ Kesalahan tidak terduga: {e}", Fore.RED)
+            self.log(f"❌ Unexpected error: {e}", Fore.RED)
 
     def gacha(self) -> None:
+        # Adding requests to the new API for bonus claims
+        for reward_no in [1, 2]:
+            bonus_url = f"{self.BASE_URL}pet/dna/gacha/bonus/claim"
+            headers = {**self.HEADERS, "Tg-Init-Data": self.token}
+            payload = {"reward_no": reward_no}
+
+            self.log(f"🎁 Claiming bonus reward {reward_no}...", Fore.CYAN)
+
+            try:
+                response = requests.post(bonus_url, headers=headers, json=payload)
+                response.raise_for_status()
+                bonus_data = response.json()
+
+                if bonus_data.get("error_code") is None:
+                    result = bonus_data.get("result", {})
+                    name = result.get("name", "Unknown")
+                    description = result.get("description", "No description")
+                    amount = result.get("amount", 0)
+
+                    self.log(f"✅ Successfully claimed bonus reward {reward_no}!", Fore.GREEN)
+                    self.log(f"📦 Name: {name}", Fore.LIGHTGREEN_EX)
+                    self.log(f"ℹ️ Description: {description}", Fore.YELLOW)
+                    self.log(f"🔢 Amount: {amount}", Fore.MAGENTA)
+                else:
+                    self.log(
+                        f"⚠️ Failed to claim bonus reward {reward_no}: {bonus_data.get('message', 'Unknown error')}",
+                        Fore.YELLOW,
+                    )
+            except requests.exceptions.RequestException as e:
+                self.log(f"❌ Failed to send claim request for bonus reward {reward_no}: {e}", Fore.RED)
+                continue
+            except ValueError as e:
+                self.log(f"❌ JSON error while claiming bonus reward {reward_no}: {e}", Fore.RED)
+                return
+            except Exception as e:
+                self.log(f"❌ Unexpected error while claiming bonus reward {reward_no}: {e}", Fore.RED)
+                return
+
+        # Main gacha process
         while True:
             if self.gacha_point > 0:
                 req_url = f"{self.BASE_URL}pet/dna/gacha"
@@ -121,74 +180,95 @@ class animix:
                 headers = {**self.HEADERS, "Tg-Init-Data": self.token}
                 payload = {"amount": 1}
 
-                self.log(f"🎲 Memulai gacha! Point gacha tersisa: {self.gacha_point}", Fore.CYAN)
+                self.log(
+                    f"🎲 Starting gacha! Remaining gacha points: {self.gacha_point}",
+                    Fore.CYAN,
+                )
 
                 try:
                     response = requests.post(req_url, headers=headers, json=payload)
-                    response.raise_for_status()  
+                    response.raise_for_status()
                     data = response.json()
 
-                    if 'result' in data and 'dna' in data['result']:
-                        dna = data['result']['dna']
+                    if "result" in data and "dna" in data["result"]:
+                        dna = data["result"]["dna"]
 
                         if isinstance(dna, list):
-                            self.log(f"🎉 Kamu mendapatkan beberapa DNA!", Fore.GREEN)
+                            self.log(f"🎉 You received multiple DNA items!", Fore.GREEN)
                             for dna_item in dna:
-                                name = dna_item.get('name', 'Tidak diketahui')
-                                dna_class = dna_item.get('class', 'Tidak diketahui')
-                                star = dna_item.get('star', 'Tidak diketahui')
-                                remaining_points = str(data['result']['god_power'])
+                                name = dna_item.get("name", "Unknown")
+                                dna_class = dna_item.get("class", "Unknown")
+                                star = dna_item.get("star", "Unknown")
+                                remaining_points = str(data["result"]["god_power"])
 
-                                self.log(f"🧬 Nama: {name}", Fore.LIGHTGREEN_EX)
+                                self.log(f"🧬 Name: {name}", Fore.LIGHTGREEN_EX)
                                 self.log(f"🏷️  Class: {dna_class}", Fore.YELLOW)
                                 self.log(f"⭐ Star: {star}", Fore.MAGENTA)
-                                self.log(f"💎 Point Gacha Tersisa: {remaining_points}", Fore.CYAN)
+                                self.log(
+                                    f"💎 Remaining Gacha Points: {remaining_points}",
+                                    Fore.CYAN,
+                                )
 
-                        else: 
-                            name = dna.get('name', 'Tidak diketahui')
-                            dna_class = dna.get('class', 'Tidak diketahui')
-                            star = dna.get('star', 'Tidak diketahui')
-                            remaining_points = str(data['result']['god_power'])
+                        else:
+                            name = dna.get("name", "Unknown")
+                            dna_class = dna.get("class", "Unknown")
+                            star = dna.get("star", "Unknown")
+                            remaining_points = str(data["result"]["god_power"])
 
-                            self.log(f"🎉 Kamu mendapatkan DNA baru!", Fore.GREEN)
-                            self.log(f"🧬 Nama: {name}", Fore.LIGHTGREEN_EX)
+                            self.log(f"🎉 You received a new DNA item!", Fore.GREEN)
+                            self.log(f"🧬 Name: {name}", Fore.LIGHTGREEN_EX)
                             self.log(f"🏷️  Class: {dna_class}", Fore.YELLOW)
                             self.log(f"⭐ Star: {star}", Fore.MAGENTA)
-                            self.log(f"💎 Point Gacha Tersisa: {remaining_points}", Fore.CYAN)
+                            self.log(
+                                f"💎 Remaining Gacha Points: {remaining_points}", Fore.CYAN
+                            )
 
-                        self.gacha_point = int(remaining_points) if isinstance(remaining_points, (int, str)) and remaining_points.isdigit() else 0
+                        self.gacha_point = (
+                            int(remaining_points)
+                            if isinstance(remaining_points, (int, str))
+                            and remaining_points.isdigit()
+                            else 0
+                        )
                     else:
-                        self.log("⚠️ Data gacha tidak sesuai dengan struktur yang diharapkan.", Fore.RED)
+                        self.log(
+                            "⚠️ Gacha data does not match the expected structure.",
+                            Fore.RED,
+                        )
                         break
 
                 except requests.exceptions.RequestException as e:
-                    self.log(f"❌ Gagal mengirim permintaan gacha: {e}", Fore.RED)
-                    break
+                    self.log(f"❌ Failed to send gacha request: {e}", Fore.RED)
+                    continue
                 except ValueError as e:
-                    self.log(f"❌ Data error (kemungkinan JSON): {e}", Fore.RED)
+                    self.log(f"❌ Data error (likely JSON): {e}", Fore.RED)
                     break
                 except KeyError as e:
-                    self.log(f"❌ Kesalahan key: {e}", Fore.RED)
+                    self.log(f"❌ Key error: {e}", Fore.RED)
                     break
                 except Exception as e:
-                    self.log(f"❌ Kesalahan tidak terduga: {e}", Fore.RED)
+                    self.log(f"❌ Unexpected error: {e}", Fore.RED)
                     break
             else:
-                self.log("🚫 Point gacha habis. Tidak dapat melanjutkan gacha.", Fore.RED)
+                self.log(
+                    "🚫 No gacha points remaining. Unable to continue.", Fore.RED
+                )
                 break
 
     def mix(self) -> None:
-        dad_ids = [] 
-        mom_ids = [] 
-        req_url = f"{self.BASE_URL}pet/dna/list/all"  
+        """Combines DNA to create new pets without delay and fetching DNA list only once."""
+        req_url = f"{self.BASE_URL}pet/dna/list/all"
+        mix_url = f"{self.BASE_URL}pet/mix"
         headers = {**self.HEADERS, "Tg-Init-Data": self.token}
 
-        self.log("\U0001F50D Mengambil daftar DNA...", Fore.CYAN)
+        self.log("🔍 Fetching DNA list...", Fore.CYAN)
 
         try:
-            response = requests.get(req_url, headers=headers)
+            response = requests.get(req_url, headers=headers, timeout=5)
             response.raise_for_status()
             data = response.json()
+
+            dad_ids = []
+            mom_ids = []
 
             if "result" in data and isinstance(data["result"], list):
                 for dna in data["result"]:
@@ -196,186 +276,189 @@ class animix:
                     if dna_id:
                         if dna.get("can_mom"):
                             mom_ids.append(dna_id)
-                            self.log(f"\u2705 DNA Mom ditemukan: {dna['name']} (ID: {dna_id})", Fore.GREEN)
+                            self.log(f"✅ Mom DNA found: {dna['name']} (ID: {dna_id})", Fore.GREEN)
                         else:
                             dad_ids.append(dna_id)
-                            self.log(f"\u2705 DNA Dad ditemukan: {dna['name']} (ID: {dna_id})", Fore.GREEN)
+                            self.log(f"✅ Dad DNA found: {dna['name']} (ID: {dna_id})", Fore.GREEN)
             else:
-                self.log("\u26A0\uFE0F Tidak ada DNA ditemukan dalam respons.", Fore.YELLOW)
-
-            if not dad_ids or not mom_ids:
-                self.log("\u274C Daftar DNA tidak mencukupi untuk penggabungan.", Fore.RED)
+                self.log("⚠️ No DNA found in the response.", Fore.YELLOW)
                 return
 
-            self.log(f"\U0001F4CB ID DNA Dad: {dad_ids}", Fore.CYAN)
-            self.log(f"\U0001F4CB ID DNA Mom: {mom_ids}", Fore.CYAN)
+            if not dad_ids or not mom_ids:
+                self.log("❌ Not enough DNA data for mixing. Ensure both Dad and Mom DNA are available.", Fore.RED)
+                return
 
-            mix_url = f"{self.BASE_URL}pet/mix"
-            self.log("\U0001F504 Menggabungkan DNA...", Fore.CYAN)
+            self.log(f"📋 Dad DNA IDs: {dad_ids}", Fore.CYAN)
+            self.log(f"📋 Mom DNA IDs: {mom_ids}", Fore.CYAN)
 
+            self.log("🔄 Mixing DNA...", Fore.CYAN)
             for dad_id in dad_ids:
                 for mom_id in mom_ids:
                     payload = {"dad_id": dad_id, "mom_id": mom_id}
-                    max_retries = 3
-                    retries = 0
 
-                    while retries < max_retries:
-                        try:
-                            mix_response = requests.post(mix_url, headers=headers, json=payload)
-                            if mix_response.status_code == 400:
-                                retries += 1
-                                self.log(f"\u26A0\uFE0F Respons 400 diterima, mencoba ulang ({retries}/{max_retries})...", Fore.YELLOW)
-                                continue
+                    try:
+                        mix_response = requests.post(mix_url, headers=headers, json=payload, timeout=5)
+                        mix_response.raise_for_status()
 
-                            mix_response.raise_for_status()
-                            mix_data = mix_response.json()
+                        mix_data = mix_response.json()
 
-                            if "result" in mix_data and "pet" in mix_data["result"]:
-                                pet_info = mix_data["result"]["pet"]
-                                self.log(f"\U0001F389 Pet baru berhasil dibuat: {pet_info['name']} (ID: {pet_info['pet_id']})", Fore.GREEN)
-                                break  
-                            else:
-                                message = mix_data.get("message", "Tidak ada pesan.")
-                                self.log(f"\u26A0\uFE0F Gagal menggabungkan: Dad {dad_id}, Mom {mom_id}. Pesan: {message}", Fore.YELLOW)
-                                break
+                        if "result" in mix_data and "pet" in mix_data["result"]:
+                            pet_info = mix_data["result"]["pet"]
+                            self.log(f"🎉 New pet created: {pet_info['name']} (ID: {pet_info['pet_id']})", Fore.GREEN)
+                        else:
+                            message = mix_data.get("message", "No message provided.")
+                            self.log(f"⚠️ Mixing failed for Dad {dad_id}, Mom {mom_id}: {message}", Fore.YELLOW)
 
-                        except requests.exceptions.RequestException as e:
-                            retries += 1
-                            self.log(f"\u274C Request mix gagal untuk Dad {dad_id}, Mom {mom_id} (percobaan {retries}/{max_retries}): {e}", Fore.RED)
+                    except requests.exceptions.RequestException as e:
+                        self.log(f"❌ Request failed for Dad {dad_id}, Mom {mom_id} (Error: {mix_response.status_code})", Fore.RED)
+                        self.log(f"🔍 Mix response details: {mix_response.text}", Fore.RED)
 
-                        except ValueError as e:
-                            self.log(f"\u274C Data error untuk Dad {dad_id}, Mom {mom_id}: {e}", Fore.RED)
-                            break
-
-                        except Exception as e:
-                            self.log(f"\u274C Unexpected error untuk Dad {dad_id}, Mom {mom_id}: {e}", Fore.RED)
-                            break
-
-                        if retries == max_retries:
-                            self.log(f"\u274C Gagal setelah {max_retries} percobaan untuk Dad {dad_id}, Mom {mom_id}.", Fore.RED)
-                            
         except requests.exceptions.RequestException as e:
-            self.log(f"\u274C Request gagal: {e}", Fore.RED)
+            self.log(f"❌ Request failed while fetching DNA list: {e}", Fore.RED)
         except ValueError as e:
-            self.log(f"\u274C Data error: {e}", Fore.RED)
+            self.log(f"❌ Data error while fetching DNA list: {e}", Fore.RED)
         except Exception as e:
-            self.log(f"\u274C Unexpected error: {e}", Fore.RED)
+            self.log(f"❌ Unexpected error while fetching DNA list: {e}", Fore.RED)
 
     def achievements(self) -> None:
+        """Handles fetching and claiming achievements."""
         req_url_list = f"{self.BASE_URL}achievement/list"
         req_url_claim = f"{self.BASE_URL}achievement/claim"
         headers = {**self.HEADERS, "tg-init-data": self.token}
-        claimable_ids = []  
+        claimable_ids = []
 
         try:
-            # Step 1: Ambil daftar achievement
-            self.log("⏳ Mengambil daftar achievements...", Fore.CYAN)
+            # Step 1: Fetch the list of achievements
+            self.log("⏳ Fetching the list of achievements...", Fore.CYAN)
             response = requests.get(req_url_list, headers=headers)
             response.raise_for_status()
             data = response.json()
 
-            # Filter achievement dengan status true dan claimed false
+            # Filter achievements with status True and claimed False
             if "result" in data and isinstance(data["result"], dict):
                 for key, value in data["result"].items():
                     if isinstance(value, dict) and "achievements" in value:
                         for achievement in value["achievements"]:
-                            if achievement.get("status") is True and achievement.get("claimed") is False:
+                            if (
+                                achievement.get("status") is True
+                                and achievement.get("claimed") is False
+                            ):
                                 claimable_ids.append(achievement.get("quest_id"))
-                                self.log(f"✅ Achievement siap diklaim: {achievement['title']} (ID: {achievement.get('quest_id')})", Fore.GREEN)
+                                self.log(
+                                    f"✅ Achievement ready to claim: {achievement['title']} (ID: {achievement.get('quest_id')})",
+                                    Fore.GREEN,
+                                )
 
             if not claimable_ids:
-                self.log("🚫 Tidak ada achievement yang dapat diklaim.", Fore.YELLOW)
+                self.log("🚫 No achievements available for claiming.", Fore.YELLOW)
                 return
 
-            # Step 2: Klaim setiap achievement yang ditemukan
+            # Step 2: Claim each achievement found
             for quest_id in claimable_ids:
-                self.log(f"🔄 Mencoba klaim achievement dengan ID {quest_id}...", Fore.CYAN)
+                self.log(f"🔄 Attempting to claim achievement with ID {quest_id}...", Fore.CYAN)
                 response = requests.post(req_url_claim, headers=headers, json={"quest_id": quest_id})
                 response.raise_for_status()
                 claim_result = response.json()
 
                 if claim_result.get("error_code") is None:
-                    self.log(f"🎉 Berhasil klaim achievement dengan ID {quest_id}!", Fore.GREEN)
+                    self.log(f"🎉 Successfully claimed achievement with ID {quest_id}!", Fore.GREEN)
                 else:
-                    self.log(f"⚠️ Gagal klaim achievement dengan ID {quest_id}. Pesan: {claim_result.get('message')}", Fore.RED)
+                    self.log(
+                        f"⚠️ Failed to claim achievement with ID {quest_id}. Message: {claim_result.get('message')}",
+                        Fore.RED,
+                    )
 
         except requests.exceptions.RequestException as e:
-            self.log(f"❌ Gagal memproses request: {e}", Fore.RED)
+            self.log(f"❌ Request processing failed: {e}", Fore.RED)
         except ValueError as e:
-            self.log(f"❌ Kesalahan data: {e}", Fore.RED)
+            self.log(f"❌ Data error: {e}", Fore.RED)
         except Exception as e:
-            self.log(f"❌ Kesalahan tidak terduga: {e}", Fore.RED)
+            self.log(f"❌ Unexpected error: {e}", Fore.RED)
 
-    def mission(self):
+    def mission(self) -> None:
+        """Handles fetching and completing missions."""
         headers = {**self.HEADERS, "Tg-Init-Data": self.token}
 
         try:
+            # Step 1: Fetch the list of missions
             mission_url = f"{self.BASE_URL}mission/list"
-            self.log("🔄 Mengambil daftar misi...", Fore.CYAN)
+            self.log("🔄 Fetching the list of missions...", Fore.CYAN)
             mission_response = requests.get(mission_url, headers=headers)
             mission_response.raise_for_status()
-            
+
             try:
                 mission_data = mission_response.json()
             except ValueError:
-                self.log("❌ Data respons misi bukan JSON yang valid.", Fore.RED)
+                self.log("❌ Mission response is not valid JSON.", Fore.RED)
                 return
-            
+
             missions = mission_data.get("result", [])
             if not isinstance(missions, list):
-                self.log("❌ Format data misi tidak valid (diharapkan list).", Fore.RED)
+                self.log("❌ Invalid mission data format (expected a list).", Fore.RED)
                 return
-            
-            self.log("✅ Berhasil mengambil daftar misi", Fore.GREEN)
+
+            self.log("✅ Successfully fetched the list of missions.", Fore.GREEN)
+
+            # Step 2: Fetch the list of pets
             pet_url = f"{self.BASE_URL}pet/list"
-            self.log("🔄 Mengambil daftar pet...", Fore.CYAN)
+            self.log("🔄 Fetching the list of pets...", Fore.CYAN)
             pet_response = requests.get(pet_url, headers=headers)
             pet_response.raise_for_status()
 
             try:
-                pet_data = pet_response.json()  
+                pet_data = pet_response.json()
             except ValueError:
-                self.log("❌ Data respons pet bukan JSON yang valid.", Fore.RED)
+                self.log("❌ Pet response is not valid JSON.", Fore.RED)
                 return
 
-            pets = pet_data.get('result', [])
+            pets = pet_data.get("result", [])
             if not isinstance(pets, list):
-                self.log("❌ Format data pet tidak valid (diharapkan list).", Fore.RED)
+                self.log("❌ Invalid pet data format (expected a list).", Fore.RED)
                 return
 
-            self.log("✅ Berhasil mengambil daftar pet", Fore.GREEN)
-            
-            self.log("🔍 Mulai klaim semua misi...", Fore.CYAN)
+            self.log("✅ Successfully fetched the list of pets.", Fore.GREEN)
+
+            # Step 3: Claim available missions
+            self.log("🔍 Claiming all available missions...", Fore.CYAN)
             for mission in missions:
-                if mission.get("is_disabled") or mission.get("is_deleted") or mission.get("status"):
+                if (
+                    mission.get("is_disabled")
+                    or mission.get("is_deleted")
+                    or mission.get("status")
+                ):
                     self.log(
-                        f"⚠️ Misi {mission.get('mission_id')} dilewati (disabled/deleted/sudah selesai).", 
-                        Fore.YELLOW
+                        f"⚠️ Mission {mission.get('mission_id')} skipped (disabled/deleted/already completed).",
+                        Fore.YELLOW,
                     )
                     continue
 
                 claim_url = f"{self.BASE_URL}mission/claim"
-                claim_payload = {
-                    "mission_id": mission.get("mission_id") 
-                }
-
+                claim_payload = {"mission_id": mission.get("mission_id")}
                 claim_response = requests.post(claim_url, headers=headers, json=claim_payload)
 
                 if claim_response.status_code == 200:
-                    self.log(f"✅ Misi {mission.get('mission_id')} berhasil diklaim", Fore.GREEN)
+                    self.log(
+                        f"✅ Mission {mission.get('mission_id')} successfully claimed.",
+                        Fore.GREEN,
+                    )
                 else:
                     self.log(
-                        f"❌ Gagal mengklaim misi {mission.get('mission_id')} (Error: {claim_response.status_code})",
+                        f"❌ Failed to claim mission {mission.get('mission_id')} (Error: {claim_response.status_code}).",
                         Fore.RED,
                     )
-                    self.log(f"🔍 Detail respons klaim: {claim_response.text}", Fore.RED)
+                    self.log(f"🔍 Claim response details: {claim_response.text}", Fore.RED)
 
-            self.log("🔍 Memfilter misi yang dapat diselesaikan dan mengirim pet...", Fore.CYAN)
+            # Step 4: Send pets to complete eligible missions
+            self.log("🔍 Filtering missions and assigning pets...", Fore.CYAN)
             for mission in missions:
-                if mission.get("is_disabled") or mission.get("is_deleted") or mission.get("status"):
+                if (
+                    mission.get("is_disabled")
+                    or mission.get("is_deleted")
+                    or mission.get("status")
+                ):
                     self.log(
-                        f"⚠️ Misi {mission.get('mission_id')} dilewati (disabled/deleted/sudah selesai).", 
-                        Fore.YELLOW
+                        f"⚠️ Mission {mission.get('mission_id')} skipped (disabled/deleted/already completed).",
+                        Fore.YELLOW,
                     )
                     continue
 
@@ -387,7 +470,7 @@ class animix:
                     for i in range(1, 4)
                 ]
 
-                available_pets = pets.copy()  
+                available_pets = pets.copy()
                 while True:
                     pet_ids = []
                     for req in required_pets:
@@ -398,101 +481,152 @@ class animix:
                                 and pet.get("id") not in pet_ids
                             ):
                                 pet_ids.append(pet["pet_id"])
-                                available_pets.remove(pet) 
+                                available_pets.remove(pet)
                                 break
 
                     if len(pet_ids) == 3:
-                        self.log(f"➡️ Mengirim pet ke misi {mission.get('mission_id')}...", Fore.CYAN)
+                        self.log(
+                            f"➡️ Assigning pets to mission {mission.get('mission_id')}...",
+                            Fore.CYAN,
+                        )
 
                         enter_url = f"{self.BASE_URL}mission/enter"
                         payload = {
-                            "mission_id": mission.get("mission_id"),  
-                            **{f"pet_{i+1}_id": pet_id for i, pet_id in enumerate(pet_ids)}  
+                            "mission_id": mission.get("mission_id"),
+                            **{f"pet_{i+1}_id": pet_id for i, pet_id in enumerate(pet_ids)},
                         }
                         enter_response = requests.post(enter_url, headers=headers, json=payload)
 
                         if enter_response.status_code == 200:
-                            self.log(f"✅ Misi {mission.get('mission_id')} berhasil dijalankan", Fore.GREEN)
+                            self.log(
+                                f"✅ Mission {mission.get('mission_id')} successfully started.",
+                                Fore.GREEN,
+                            )
                             break
                         else:
                             self.log(
-                                f"❌ Gagal menjalankan misi {mission.get('mission_id')} (Error: {enter_response.status_code})",
+                                f"❌ Failed to start mission {mission.get('mission_id')} (Error: {enter_response.status_code}).",
                                 Fore.RED,
                             )
-                            self.log(f"🔍 Detail respons menjalankan misi: {enter_response.text}", Fore.RED)
+                            self.log(
+                                f"🔍 Mission start response details: {enter_response.text}",
+                                Fore.RED,
+                            )
 
                             if "PET_BUSY" in enter_response.text:
-                                self.log(f"🔄 Mencoba ulang dengan pet lain untuk misi {mission.get('mission_id')}...", Fore.YELLOW)
-                                continue 
+                                self.log(
+                                    f"🔄 Retrying with different pets for mission {mission.get('mission_id')}...",
+                                    Fore.YELLOW,
+                                )
+                                continue
                             else:
-                                break  
+                                break
                     else:
-                        self.log(f"❌ Misi {mission.get('mission_id')} tidak memenuhi syarat pet", Fore.RED)
-                        break  
+                        self.log(
+                            f"❌ Mission {mission.get('mission_id')} does not meet pet requirements.",
+                            Fore.RED,
+                        )
+                        break
 
         except requests.exceptions.RequestException as e:
-            self.log(f"❌ Terjadi kesalahan saat memproses: {e}", Fore.RED)
+            self.log(f"❌ An error occurred while processing: {e}", Fore.RED)
 
-    def quest(self):
+    def quest(self) -> None:
+        """Handles fetching and claiming quests."""
         headers = {**self.HEADERS, "Tg-Init-Data": self.token}
 
         try:
+            # Step 1: Fetch the list of quests
             quest_url = f"{self.BASE_URL}quest/list"
-            self.log("🔄 Mengambil daftar quest...", Fore.CYAN)
+            self.log("🔄 Fetching the list of quests...", Fore.CYAN)
             quest_response = requests.get(quest_url, headers=headers)
             quest_response.raise_for_status()
-            quest_data = quest_response.json()
+
+            try:
+                quest_data = quest_response.json()
+            except ValueError:
+                self.log("❌ Quest response is not valid JSON.", Fore.RED)
+                return
 
             quests = quest_data.get("result", {}).get("quests", [])
             if not quests:
-                self.log("⚠️ Tidak ada quest yang tersedia.", Fore.YELLOW)
+                self.log("⚠️ No quests available.", Fore.YELLOW)
                 return
 
-            self.log("✅ Berhasil mengambil daftar quest", Fore.GREEN)
+            self.log("✅ Successfully fetched the list of quests.", Fore.GREEN)
 
+            # Step 2: Process each quest
             for quest in quests:
-                if quest.get("is_disabled") or quest.get("is_deleted") or quest.get("status"):
-                    self.log(f"⚠️ Quest {quest.get('quest_code')} dilewati (disabled/deleted/selesai).", Fore.YELLOW)
+                if (
+                    quest.get("is_disabled")
+                    or quest.get("is_deleted")
+                    or quest.get("status")
+                ):
+                    self.log(
+                        f"⚠️ Quest {quest.get('quest_code')} skipped (disabled/deleted/completed).",
+                        Fore.YELLOW,
+                    )
                     continue
 
                 quest_code = quest.get("quest_code")
-                self.log(f"➡️ Melakukan check atau claim untuk quest {quest_code}...", Fore.CYAN)
+                self.log(
+                    f"➡️ Checking or claiming quest {quest_code}...",
+                    Fore.CYAN,
+                )
 
+                # Step 3: Claim the quest
                 check_url = f"{self.BASE_URL}quest/check"
                 payload = {"quest_code": quest_code}
                 check_response = requests.post(check_url, headers=headers, json=payload)
 
                 if check_response.status_code == 200:
-                    self.log(f"✅ Quest {quest_code} berhasil di-claim", Fore.GREEN)
+                    self.log(f"✅ Quest {quest_code} successfully claimed.", Fore.GREEN)
                 else:
-                    self.log(f"❌ Gagal meng-claim quest {quest_code} (Error: {check_response.status_code})", Fore.RED)
-        except requests.exceptions.RequestException as e:
-            self.log(f"❌ Terjadi kesalahan saat memproses quest: {e}", Fore.RED)
+                    self.log(
+                        f"❌ Failed to claim quest {quest_code} (Error: {check_response.status_code}).",
+                        Fore.RED,
+                    )
+                    self.log(f"🔍 Claim response details: {check_response.text}", Fore.RED)
 
-    def claim_pass(self):
+        except requests.exceptions.RequestException as e:
+            self.log(f"❌ An error occurred while processing quests: {e}", Fore.RED)
+
+    def claim_pass(self) -> None:
+        """Handles claiming rewards from season passes."""
         headers = {**self.HEADERS, "Tg-Init-Data": self.token}
 
         try:
+            # Step 1: Fetch the list of season passes
             pass_url = f"{self.BASE_URL}season-pass/list"
-            self.log("🔄 Mengambil daftar season pass...", Fore.CYAN)
+            self.log("🔄 Fetching the list of season passes...", Fore.CYAN)
             pass_response = requests.get(pass_url, headers=headers)
             pass_response.raise_for_status()
-            passes = pass_response.json().get("result", [])
 
-            if not passes:
-                self.log("⚠️ Tidak ada season pass yang tersedia.", Fore.YELLOW)
+            try:
+                passes = pass_response.json().get("result", [])
+            except ValueError:
+                self.log("❌ Season pass response is not valid JSON.", Fore.RED)
                 return
 
-            self.log("✅ Berhasil mengambil daftar season pass", Fore.GREEN)
+            if not passes:
+                self.log("⚠️ No season passes available.", Fore.YELLOW)
+                return
 
+            self.log("✅ Successfully fetched the list of season passes.", Fore.GREEN)
+
+            # Step 2: Process each season pass
             for season in passes:
                 season_id = season.get("season_id")
                 try:
                     current_step = int(season.get("current_step", 0))
                 except ValueError:
-                    self.log(f"❌ Nilai current_step untuk season {season_id} tidak valid, melewati season ini.", Fore.RED)
+                    self.log(
+                        f"❌ Invalid `current_step` value for season {season_id}, skipping this season.",
+                        Fore.RED,
+                    )
                     continue
 
+                # Step 3: Claim free rewards
                 free_rewards = season.get("free_rewards", [])
                 for reward in free_rewards:
                     step = reward.get("step")
@@ -501,21 +635,36 @@ class animix:
                     try:
                         step = int(step)
                     except (ValueError, TypeError):
-                        self.log(f"❌ Nilai step untuk reward free di season {season_id} tidak valid, melewati reward ini.", Fore.RED)
+                        self.log(
+                            f"❌ Invalid `step` value for free reward in season {season_id}, skipping this reward.",
+                            Fore.RED,
+                        )
                         continue
 
                     if not is_claimed and step <= current_step:
-                        self.log(f"➡️ Mengklaim reward gratis untuk season {season_id}, step {step}...", Fore.CYAN)
+                        self.log(
+                            f"➡️ Claiming free reward for season {season_id}, step {step}...",
+                            Fore.CYAN,
+                        )
 
                         claim_url = f"{self.BASE_URL}season-pass/claim"
                         payload = {"season_id": season_id, "step": step, "type": "free"}
-                        claim_response = requests.post(claim_url, headers=headers, json=payload)
+                        claim_response = requests.post(
+                            claim_url, headers=headers, json=payload
+                        )
 
                         if claim_response.status_code == 200:
-                            self.log(f"✅ Reward gratis step {step} berhasil diklaim", Fore.GREEN)
+                            self.log(
+                                f"✅ Successfully claimed free reward at step {step}.",
+                                Fore.GREEN,
+                            )
                         else:
-                            self.log(f"❌ Gagal klaim reward step {step} (Error: {claim_response.status_code})", Fore.RED)
+                            self.log(
+                                f"❌ Failed to claim reward at step {step} (Error: {claim_response.status_code}).",
+                                Fore.RED,
+                            )
 
+                # Step 4: Claim premium rewards
                 premium_rewards = season.get("premium_rewards", [])
                 for reward in premium_rewards:
                     step = reward.get("step")
@@ -524,22 +673,41 @@ class animix:
                     try:
                         step = int(step)
                     except (ValueError, TypeError):
-                        self.log(f"❌ Nilai step untuk reward premium di season {season_id} tidak valid, melewati reward ini.", Fore.RED)
+                        self.log(
+                            f"❌ Invalid `step` value for premium reward in season {season_id}, skipping this reward.",
+                            Fore.RED,
+                        )
                         continue
 
                     if not is_claimed and step <= current_step:
-                        self.log(f"➡️ Mengklaim reward premium untuk season {season_id}, step {step}...", Fore.CYAN)
+                        self.log(
+                            f"➡️ Claiming premium reward for season {season_id}, step {step}...",
+                            Fore.CYAN,
+                        )
 
                         claim_url = f"{self.BASE_URL}season-pass/claim"
-                        payload = {"season_id": season_id, "step": step, "type": "premium"}
-                        claim_response = requests.post(claim_url, headers=headers, json=payload)
+                        payload = {
+                            "season_id": season_id,
+                            "step": step,
+                            "type": "premium",
+                        }
+                        claim_response = requests.post(
+                            claim_url, headers=headers, json=payload
+                        )
 
                         if claim_response.status_code == 200:
-                            self.log(f"✅ Reward premium step {step} berhasil diklaim", Fore.GREEN)
+                            self.log(
+                                f"✅ Successfully claimed premium reward at step {step}.",
+                                Fore.GREEN,
+                            )
                         else:
-                            self.log(f"❌ Gagal klaim reward step {step} (Error: {claim_response.status_code})", Fore.RED)
+                            self.log(
+                                f"❌ Failed to claim reward at step {step} (Error: {claim_response.status_code}).",
+                                Fore.RED,
+                            )
+
         except requests.exceptions.RequestException as e:
-            self.log(f"❌ Terjadi kesalahan saat memproses season pass: {e}", Fore.RED)
+            self.log(f"❌ An error occurred while processing season passes: {e}", Fore.RED)
 
 if __name__ == "__main__":
     ani = animix()
@@ -547,52 +715,45 @@ if __name__ == "__main__":
     max_index = len(ani.query_list)
     config = ani.load_config()
 
+    ani.log("🎉 [LIVEXORDS] === Welcome to AniMix Automation === [LIVEXORDS]", Fore.YELLOW)
+    ani.log(f"📂 Loaded {max_index} accounts from query list.", Fore.YELLOW)
+
     while True:
-        ani.log(f"{Fore.GREEN}[LIVEXORDS]===== {index + 1}/{len(ani.query_list)} =====[LIVEXORDS]{Fore.RESET}")
+        # Format current_account: Show only the first 10 characters, rest hidden
+        current_account = ani.query_list[index]
+        display_account = current_account[:10] + "..." if len(current_account) > 10 else current_account
+
+        ani.log(f"👤 [ACCOUNT] Processing account {index + 1}/{max_index}: {display_account}", Fore.YELLOW)
+
+        # Perform login for the current account
         ani.login(index)
-            
-        if config.get("achievements", False):
-            ani.log(f"{Fore.YELLOW}[CONFIG] achievements: True{Fore.RESET},")
-            ani.achievements()
-        else:
-            ani.log(f"{Fore.RED}[CONFIG] achievements: False{Fore.RESET},")
-        
-        if config.get("mission", False):
-            ani.log(f"{Fore.YELLOW}[CONFIG] mission: True{Fore.RESET},")
-            ani.mission()
-        else:
-            ani.log(f"{Fore.RED}[CONFIG] mission: False{Fore.RESET},")
-        
-        if config.get("quest", False):
-            ani.log(f"{Fore.YELLOW}[CONFIG] quest: True{Fore.RESET},")
-            ani.quest()
-        else:
-            ani.log(f"{Fore.RED}[CONFIG] quest: False{Fore.RESET},")
-        
-        if config.get("gacha", False):
-            ani.log(f"{Fore.YELLOW}[CONFIG] gacha: True{Fore.RESET},")
-            ani.gacha()
-        else:
-            ani.log(f"{Fore.RED}[CONFIG] gacha: False{Fore.RESET},")
-            
-        if config.get("mix", False):
-            ani.log(f"{Fore.YELLOW}[CONFIG] mix: True{Fore.RESET},")
-            ani.mix()
-        else:
-            ani.log(f"{Fore.RED}[CONFIG] mix: False{Fore.RESET},")
-            
-        if config.get("claim_pass", False):
-            ani.log(f"{Fore.YELLOW}[CONFIG] claim_pass: True{Fore.RESET},")
-            ani.claim_pass()
-        else:
-            ani.log(f"{Fore.RED}[CONFIG] claim_pass: False{Fore.RESET},")
-            
+
+        # Task execution with clear log messages
+        ani.log("🛠️ Starting task execution...")
+        tasks = {
+            "achievements": "🏆 Achievements",
+            "mission": "📜 Missions",
+            "quest": "🗺️ Quests",
+            "gacha": "🎰 Gacha",
+            "mix": "🧬 DNA Mixing",
+            "claim_pass": "🎟️ Claiming Pass Rewards",
+        }
+
+        for task_key, task_name in tasks.items():
+            task_status = config.get(task_key, False)
+            ani.log(f"[CONFIG] {task_name}: {'✅ Enabled' if task_status else '❌ Disabled'}", Fore.YELLOW if task_status else Fore.RED)
+
+            if task_status:
+                ani.log(f"🔄 Executing {task_name}...")
+                getattr(ani, task_key)()
+
+        # Handle account switching and loop delay
         if index == max_index - 1:
-            ani.log(f"Berhenti untuk loop selanjutnya{Fore.CYAN},")
-            ani.log(f"Tidur selama {config.get("delay_loop")} detik{Fore.CYAN},")
-            time.sleep(config.get("delay_loop"))
+            ani.log("🔁 All accounts processed. Restarting loop.")
+            ani.log(f"⏳ Sleeping for {config.get('delay_loop', 30)} seconds before restarting.")
+            time.sleep(config.get("delay_loop", 30))
             index = 0
         else:
-            ani.log(f"Tidur selama {config.get("delay_pergantian_akun")} detik ,sebelum melanjutkan ke akun berikutnya")
-            time.sleep(config.get("delay_pergantian_akun"))
+            ani.log(f"➡️ Switching to the next account in {config.get('delay_account_switch', 10)} seconds.")
+            time.sleep(config.get("delay_account_switch", 10))
             index += 1

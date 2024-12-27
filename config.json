@@ -6,5 +6,5 @@
   "quest": true,
   "claim_pass": true,
   "delay_loop": 3000,
-  "delay_pergantian_akun": 10
+  "delay_account_switch": 10
 }
