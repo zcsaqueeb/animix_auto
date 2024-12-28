@@ -20,13 +20,11 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 **Version v1.0.3**
+## 🌟 **Version v1.0.4**
 
 ### **Updates**
 
-1. **Added**: Bonus gacha points can now be claimed automatically.
-2. **Improved**: Script is now in English for wider accessibility.
-3. **Enhanced**: User-friendly design for smoother operation.
+1. **Fixed**: Fixed BUG MIX DNA
 
 ### **Features in This Version**:
 
