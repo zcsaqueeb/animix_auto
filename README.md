@@ -20,11 +20,11 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 **Version v1.0.4**
+## 🌟 **Version v1.0.5**
 
 ### **Updates**
 
-1. **Fixed**: Fixed BUG MIX DNA
+1. **Fixed**: Fixed BUG GACHA
 
 ### **Features in This Version**:
 

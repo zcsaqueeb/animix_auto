@@ -143,8 +143,20 @@ class animix:
 
             try:
                 response = requests.post(bonus_url, headers=headers, json=payload)
-                response.raise_for_status()
-                bonus_data = response.json()
+                if response is None or response.status_code != 200:
+                    self.log(
+                        f"⚠️ Response for bonus reward {reward_no} is None or invalid.",
+                        Fore.YELLOW,
+                    )
+                    continue
+
+                bonus_data = response.json() if response.text else {}
+                if not bonus_data:
+                    self.log(
+                        f"⚠️ Empty or invalid JSON response for bonus reward {reward_no}.",
+                        Fore.YELLOW,
+                    )
+                    continue
 
                 if bonus_data.get("error_code") is None:
                     result = bonus_data.get("result", {})
@@ -166,16 +178,15 @@ class animix:
                 continue
             except ValueError as e:
                 self.log(f"❌ JSON error while claiming bonus reward {reward_no}: {e}", Fore.RED)
-                return
+                continue
             except Exception as e:
                 self.log(f"❌ Unexpected error while claiming bonus reward {reward_no}: {e}", Fore.RED)
-                return
+                continue
 
         # Main gacha process
         while True:
             if self.gacha_point > 0:
                 req_url = f"{self.BASE_URL}pet/dna/gacha"
-
                 headers = {**self.HEADERS, "Tg-Init-Data": self.token}
                 payload = {"amount": 1}
 
@@ -186,8 +197,17 @@ class animix:
 
                 try:
                     response = requests.post(req_url, headers=headers, json=payload)
-                    response.raise_for_status()
-                    data = response.json()
+                    if response is None or response.status_code != 200:
+                        self.log(
+                            "⚠️ Gacha response is None or invalid. Skipping this attempt.",
+                            Fore.YELLOW,
+                        )
+                        continue
+
+                    data = response.json() if response.text else {}
+                    if not data:
+                        self.log("⚠️ Empty or invalid JSON response for gacha.", Fore.YELLOW)
+                        continue
 
                     if "result" in data and "dna" in data["result"]:
                         dna = data["result"]["dna"]
@@ -198,7 +218,7 @@ class animix:
                                 name = dna_item.get("name", "Unknown")
                                 dna_class = dna_item.get("class", "Unknown")
                                 star = dna_item.get("star", "Unknown")
-                                remaining_points = str(data["result"]["god_power"])
+                                remaining_points = str(data["result"].get("god_power", 0))
 
                                 self.log(f"🧬 Name: {name}", Fore.LIGHTGREEN_EX)
                                 self.log(f"🏷️  Class: {dna_class}", Fore.YELLOW)
@@ -209,10 +229,10 @@ class animix:
                                 )
 
                         else:
-                            name = dna.get("name", "Unknown")
-                            dna_class = dna.get("class", "Unknown")
-                            star = dna.get("star", "Unknown")
-                            remaining_points = str(data["result"]["god_power"])
+                            name = dna.get("name", "Unknown") if dna else "Unknown"
+                            dna_class = dna.get("class", "Unknown") if dna else "Unknown"
+                            star = dna.get("star", "Unknown") if dna else "Unknown"
+                            remaining_points = str(data["result"].get("god_power", 0))
 
                             self.log(f"🎉 You received a new DNA item!", Fore.GREEN)
                             self.log(f"🧬 Name: {name}", Fore.LIGHTGREEN_EX)
@@ -225,7 +245,7 @@ class animix:
                         self.gacha_point = (
                             int(remaining_points)
                             if isinstance(remaining_points, (int, str))
-                            and remaining_points.isdigit()
+                            and str(remaining_points).isdigit()
                             else 0
                         )
                     else:
@@ -233,20 +253,20 @@ class animix:
                             "⚠️ Gacha data does not match the expected structure.",
                             Fore.RED,
                         )
-                        break
+                        continue
 
                 except requests.exceptions.RequestException as e:
                     self.log(f"❌ Failed to send gacha request: {e}", Fore.RED)
                     continue
                 except ValueError as e:
                     self.log(f"❌ Data error (likely JSON): {e}", Fore.RED)
-                    break
+                    continue
                 except KeyError as e:
                     self.log(f"❌ Key error: {e}", Fore.RED)
-                    break
+                    continue
                 except Exception as e:
                     self.log(f"❌ Unexpected error: {e}", Fore.RED)
-                    break
+                    continue
             else:
                 self.log(
                     "🚫 No gacha points remaining. Unable to continue.", Fore.RED
