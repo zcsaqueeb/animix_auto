@@ -26,7 +26,8 @@ class animix:
     def __init__(self):
         self.query_list = self.load_query("query.txt")
         self.token = None
-        self.gacha_point = 0
+        self.token_reguler = 0
+        self.token_super = 0
 
     def banner(self) -> None:
         """Displays the banner for the bot."""
@@ -105,19 +106,36 @@ class animix:
             if "result" in data:
                 user_info = data["result"]
                 username = user_info.get("telegram_username", "Unknown")
-                gacha_point = user_info.get("god_power", 0)
+                balance = user_info.get("token", 0)
 
-                self.gacha_point = (
-                    int(gacha_point)
-                    if isinstance(gacha_point, (int, str))
-                    and str(gacha_point).isdigit()
+                self.balance = (
+                    int(balance)
+                    if isinstance(balance, (int, str))
+                    and str(balance).isdigit()
                     else 0
                 )
                 self.token = token
 
                 self.log("✅ Login successful!", Fore.GREEN)
                 self.log(f"👤 Username: {username}", Fore.LIGHTGREEN_EX)
-                self.log(f"💎 Gacha Points: {self.gacha_point}", Fore.CYAN)
+                self.log(f"💰 Balance: {self.balance}", Fore.CYAN)
+
+                inventory = user_info.get("inventory", [])
+                token_reguler = next((item for item in inventory if item["id"] == 1), None)
+                token_super = next((item for item in inventory if item["id"] == 3), None)
+
+                if token_reguler:
+                    self.log(f"💵 Regular Token: {token_reguler['amount']}", Fore.LIGHTBLUE_EX)
+                    self.token_reguler = token_reguler['amount']
+                else:
+                    self.log(f"💵 Regular Token: 0", Fore.LIGHTBLUE_EX)
+
+                if token_super:
+                    self.log(f"💸 Super Token: {token_super['amount']}", Fore.LIGHTBLUE_EX)
+                    self.token_super = token_super['amount']
+                else:
+                    self.log(f"💸 Super Token: 0", Fore.LIGHTBLUE_EX)
+
             else:
                 self.log(
                     "⚠️ Unexpected response structure.", Fore.YELLOW
@@ -185,93 +203,90 @@ class animix:
 
         # Main gacha process
         while True:
-            if self.gacha_point > 0:
+            if self.token_reguler > 0:
                 req_url = f"{self.BASE_URL}pet/dna/gacha"
                 headers = {**self.HEADERS, "Tg-Init-Data": self.token}
-                payload = {"amount": 1}
+                payload = {"amount": 1, "is_super": False}
+            elif self.token_super > 0:
+                req_url = f"{self.BASE_URL}pet/dna/gacha"
+                headers = {**self.HEADERS, "Tg-Init-Data": self.token}
+                payload = {"amount": 1, "is_super": True}
+            else:
+                self.log("🚫 No gacha points remaining. Unable to continue.", Fore.RED)
+                break
 
-                self.log(
-                    f"🎲 Starting gacha! Remaining gacha points: {self.gacha_point}",
-                    Fore.CYAN,
-                )
+            self.log(
+                f"🎲 Starting {'super' if payload['is_super'] else 'regular'} gacha! Remaining gacha points: {self.token_super if payload['is_super'] else self.token_reguler}",
+                Fore.CYAN,
+            )
 
-                try:
-                    response = requests.post(req_url, headers=headers, json=payload)
-                    if response is None or response.status_code != 200:
-                        self.log(
-                            "⚠️ Gacha response is None or invalid. Skipping this attempt.",
-                            Fore.YELLOW,
-                        )
-                        continue
+            try:
+                response = requests.post(req_url, headers=headers, json=payload)
+                if response is None or response.status_code != 200:
+                    self.log("⚠️ Gacha response is None or invalid. Skipping this attempt.", Fore.YELLOW)
+                    continue
 
-                    data = response.json() if response.text else {}
-                    if not data:
-                        self.log("⚠️ Empty or invalid JSON response for gacha.", Fore.YELLOW)
-                        continue
+                data = response.json() if response.text else {}
+                if not data:
+                    self.log("⚠️ Empty or invalid JSON response for gacha.", Fore.YELLOW)
+                    continue
 
-                    if "result" in data and "dna" in data["result"]:
-                        dna = data["result"]["dna"]
+                if "result" in data and "dna" in data["result"]:
+                    dna = data["result"]["dna"]
 
-                        if isinstance(dna, list):
-                            self.log(f"🎉 You received multiple DNA items!", Fore.GREEN)
-                            for dna_item in dna:
-                                name = dna_item.get("name", "Unknown")
-                                dna_class = dna_item.get("class", "Unknown")
-                                star = dna_item.get("star", "Unknown")
-                                remaining_points = str(data["result"].get("god_power", 0))
-
-                                self.log(f"🧬 Name: {name}", Fore.LIGHTGREEN_EX)
-                                self.log(f"🏷️  Class: {dna_class}", Fore.YELLOW)
-                                self.log(f"⭐ Star: {star}", Fore.MAGENTA)
-                                self.log(
-                                    f"💎 Remaining Gacha Points: {remaining_points}",
-                                    Fore.CYAN,
-                                )
-
-                        else:
-                            name = dna.get("name", "Unknown") if dna else "Unknown"
-                            dna_class = dna.get("class", "Unknown") if dna else "Unknown"
-                            star = dna.get("star", "Unknown") if dna else "Unknown"
+                    if isinstance(dna, list):
+                        self.log(f"🎉 You received multiple DNA items!", Fore.GREEN)
+                        for dna_item in dna:
+                            name = dna_item.get("name", "Unknown")
+                            dna_class = dna_item.get("class", "Unknown")
+                            star = dna_item.get("star", "Unknown")
                             remaining_points = str(data["result"].get("god_power", 0))
 
-                            self.log(f"🎉 You received a new DNA item!", Fore.GREEN)
                             self.log(f"🧬 Name: {name}", Fore.LIGHTGREEN_EX)
                             self.log(f"🏷️  Class: {dna_class}", Fore.YELLOW)
                             self.log(f"⭐ Star: {star}", Fore.MAGENTA)
-                            self.log(
-                                f"💎 Remaining Gacha Points: {remaining_points}", Fore.CYAN
-                            )
-
-                        self.gacha_point = (
-                            int(remaining_points)
-                            if isinstance(remaining_points, (int, str))
-                            and str(remaining_points).isdigit()
-                            else 0
-                        )
+                            self.log(f"💎 Remaining Gacha Points: {remaining_points}", Fore.CYAN)
+                            if payload['is_super']:
+                                self.token_super = data['result'].get("god_power", 0)
+                            else: 
+                                self.token_reguler = data['result'].get("god_power", 0)
                     else:
-                        self.log(
-                            "⚠️ Gacha data does not match the expected structure.",
-                            Fore.RED,
-                        )
-                        continue
+                        name = dna.get("name", "Unknown") if dna else "Unknown"
+                        dna_class = dna.get("class", "Unknown") if dna else "Unknown"
+                        star = dna.get("star", "Unknown") if dna else "Unknown"
+                        remaining_points = str(data["result"].get("god_power", 0))
 
-                except requests.exceptions.RequestException as e:
-                    self.log(f"❌ Failed to send gacha request: {e}", Fore.RED)
+                        self.log(f"🎉 You received a new DNA item!", Fore.GREEN)
+                        self.log(f"🧬 Name: {name}", Fore.LIGHTGREEN_EX)
+                        self.log(f"🏷️  Class: {dna_class}", Fore.YELLOW)
+                        self.log(f"⭐ Star: {star}", Fore.MAGENTA)
+                        self.log(f"💎 Remaining Gacha Points: {remaining_points}", Fore.CYAN)
+                        if payload['is_super']:
+                            self.token_super = data['result'].get("god_power", 0)
+                        else: 
+                            self.token_reguler = data['result'].get("god_power", 0)
+
+                    self.gacha_point = (
+                        int(remaining_points)
+                        if isinstance(remaining_points, (int, str)) and str(remaining_points).isdigit()
+                        else 0
+                    )
+                else:
+                    self.log("⚠️ Gacha data does not match the expected structure.", Fore.RED)
                     continue
-                except ValueError as e:
-                    self.log(f"❌ Data error (likely JSON): {e}", Fore.RED)
-                    continue
-                except KeyError as e:
-                    self.log(f"❌ Key error: {e}", Fore.RED)
-                    continue
-                except Exception as e:
-                    self.log(f"❌ Unexpected error: {e}", Fore.RED)
-                    continue
-            else:
-                self.log(
-                    "🚫 No gacha points remaining. Unable to continue.", Fore.RED
-                )
-                break
+
+            except requests.exceptions.RequestException as e:
+                self.log(f"❌ Failed to send gacha request: {e}", Fore.RED)
+                continue
+            except ValueError as e:
+                self.log(f"❌ Data error (likely JSON): {e}", Fore.RED)
+                continue
+            except KeyError as e:
+                self.log(f"❌ Key error: {e}", Fore.RED)
+                continue
+            except Exception as e:
+                self.log(f"❌ Unexpected error: {e}", Fore.RED)
+                continue
 
     def mix(self) -> None:
         """Combines DNA to create new pets without delay and ensuring unique DNA usage."""
@@ -282,7 +297,7 @@ class animix:
         self.log("🔍 Fetching DNA list...", Fore.CYAN)
 
         try:
-            response = requests.get(req_url, headers=headers, timeout=5)
+            response = requests.get(req_url, headers=headers, timeout=10)
             response.raise_for_status()
             data = response.json()
 
@@ -315,25 +330,32 @@ class animix:
                         continue
 
                     payload = {"dad_id": dad_id, "mom_id": mom_id}
-                    try:
-                        mix_response = requests.post(mix_url, headers=headers, json=payload, timeout=5)
-                        if mix_response.status_code == 200:
-                            mix_data = mix_response.json()
+                    while True:
+                        try:
+                            mix_response = requests.post(mix_url, headers=headers, json=payload, timeout=10)
+                            if mix_response.status_code == 200:
+                                mix_data = mix_response.json()
 
-                            if "result" in mix_data and "pet" in mix_data["result"]:
-                                pet_info = mix_data["result"]["pet"]
-                                self.log(f"🎉 New pet created: {pet_info['name']} (ID: {pet_info['pet_id']})", Fore.GREEN)
-                                # Mark the IDs as used
-                                used_ids.add(dad_id)
-                                used_ids.add(mom_id)
-                                break
+                                if "result" in mix_data and "pet" in mix_data["result"]:
+                                    pet_info = mix_data["result"]["pet"]
+                                    self.log(f"🎉 New pet created: {pet_info['name']} (ID: {pet_info['pet_id']})", Fore.GREEN)
+                                    # Mark the IDs as used
+                                    used_ids.add(dad_id)
+                                    used_ids.add(mom_id)
+                                    break
+                                else:
+                                    message = mix_data.get("message", "No message provided.")
+                                    self.log(f"⚠️ Mixing failed for Dad {dad_id}, Mom {mom_id}: {message}", Fore.YELLOW)
+                                    break
+                            elif mix_response.status_code == 429:
+                                self.log("⏳ Too many requests (429). Retrying in 5 seconds...", Fore.YELLOW)
+                                time.sleep(5)
                             else:
-                                message = mix_data.get("message", "No message provided.")
-                                self.log(f"⚠️ Mixing failed for Dad {dad_id}, Mom {mom_id}: {message}", Fore.YELLOW)
-                        else:
-                            self.log(f"❌ Request failed for Dad {dad_id}, Mom {mom_id} (Status: {mix_response.status_code})", Fore.RED)
-                    except requests.exceptions.RequestException as e:
-                        self.log(f"❌ Request failed for Dad {dad_id}, Mom {mom_id}: {e}", Fore.RED)
+                                self.log(f"❌ Request failed for Dad {dad_id}, Mom {mom_id} (Status: {mix_response.status_code})", Fore.RED)
+                                break
+                        except requests.exceptions.RequestException as e:
+                            self.log(f"❌ Request failed for Dad {dad_id}, Mom {mom_id}: {e}", Fore.RED)
+                            break
 
         except requests.exceptions.RequestException as e:
             self.log(f"❌ Request failed while fetching DNA list: {e}", Fore.RED)
@@ -356,18 +378,18 @@ class animix:
             response.raise_for_status()
             data = response.json()
 
-            # Filter achievements with status True and claimed False
             if "result" in data and isinstance(data["result"], dict):
-                for key, value in data["result"].items():
-                    if isinstance(value, dict) and "achievements" in value:
-                        for achievement in value["achievements"]:
+                for achievement_type, achievement_data in data["result"].items():
+                    if isinstance(achievement_data, dict) and "achievements" in achievement_data:
+                        self.log(f"📌 Checking achievements type: {achievement_type}", Fore.BLUE)
+                        for achievement in achievement_data["achievements"]:
                             if (
                                 achievement.get("status") is True
                                 and achievement.get("claimed") is False
                             ):
                                 claimable_ids.append(achievement.get("quest_id"))
                                 self.log(
-                                    f"✅ Achievement ready to claim: {achievement['title']} (ID: {achievement.get('quest_id')})",
+                                    f"✅ Achievement ready to claim: {achievement_data['title']} (ID: {achievement.get('quest_id')})",
                                     Fore.GREEN,
                                 )
 

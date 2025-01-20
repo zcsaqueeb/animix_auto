@@ -2,6 +2,7 @@
 <h1 align="center">Animix Bot</h1>
 
 <p align="center">Automate tasks in Animix to enhance your efficiency and maximize your results!</p>
+
 ---
 
 ## 🚀 **About the Bot**
@@ -20,11 +21,16 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 **Version v1.0.5**
+## 🌟 **Version v1.0.6**
 
 ### **Updates**
+1. **Added**: Super gacha functionality.
+2. **Fixed**: Achievement claiming process.
+3. **Added**: Additional data information during login.
+4. **Fixed**: BUG in auto mix.
 
-1. **Fixed**: Fixed BUG GACHA
+### **Upcoming Updates**
+1. Implementing reward claims for super gacha.
 
 ### **Features in This Version**:
 
