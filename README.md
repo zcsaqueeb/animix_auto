@@ -21,10 +21,10 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 **Version v1.1.0**
+## 🌟 **Version v1.1.1**
 
 ### **Updates**
-1. **Added**: Auto PvP functionality.
+1. **Improved**: The mix system has been updated. Now, pets with stars below 5 will only be mixed with other pets that have stars below 5. Similarly, pets with 6 stars or more will only be mixed with pets that have 6 stars or more.
 
 ### **Features in This Version**:
 

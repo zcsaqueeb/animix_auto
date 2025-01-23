@@ -289,8 +289,8 @@ class animix:
                 continue
 
     def mix(self) -> None:
-        """Combines DNA to create new pets without delay and ensuring unique DNA usage."""
-        req_url = f"{self.BASE_URL}pet/dna/list/all"
+        """Combines DNA to create new pets based on star level and can_mom constraints."""
+        req_url = f"{self.BASE_URL}pet/dna/list"
         mix_url = f"{self.BASE_URL}pet/mix"
         headers = {**self.HEADERS, "Tg-Init-Data": self.token}
 
@@ -301,61 +301,81 @@ class animix:
             response.raise_for_status()
             data = response.json()
 
-            dna_ids = []
+            dna_list = []
 
             if "result" in data and isinstance(data["result"], list):
                 for dna in data["result"]:
-                    dna_id = dna.get("dna_id")
-                    if dna_id:
-                        dna_ids.append(dna_id)
-                        self.log(f"✅ DNA found: {dna['name']} (ID: {dna_id})", Fore.GREEN)
+                    if dna.get("star") and dna.get("can_mom") is not None:
+                        dna_list.append(dna)
+                        self.log(
+                            f"✅ DNA found: {dna['name']} (Star: {dna['star']}, Can Mom: {dna['can_mom']})",
+                            Fore.GREEN
+                        )
             else:
                 self.log("⚠️ No DNA found in the response.", Fore.YELLOW)
                 return
 
-            if len(dna_ids) < 2:
-                self.log("❌ Not enough DNA data for mixing. At least two IDs are required.", Fore.RED)
+            if len(dna_list) < 2:
+                self.log("❌ Not enough DNA data for mixing. At least two entries are required.", Fore.RED)
                 return
 
-            self.log(f"📋 DNA IDs: {dna_ids}", Fore.CYAN)
+            self.log(f"📋 Filtered DNA list: {[(dna['name'], dna['star'], dna['can_mom']) for dna in dna_list]}", Fore.CYAN)
 
             used_ids = set()
-
             self.log("🔄 Mixing DNA...", Fore.CYAN)
-            for i, dad_id in enumerate(dna_ids):
-                if dad_id in used_ids:
+
+            for i, dad in enumerate(dna_list):
+                if dad["item_id"] in used_ids:
                     continue
-                for j, mom_id in enumerate(dna_ids):
-                    if mom_id in used_ids or dad_id == mom_id:
+
+                for j, mom in enumerate(dna_list):
+                    if (
+                        mom["item_id"] in used_ids 
+                        or dad["item_id"] == mom["item_id"] 
+                        or not mom["can_mom"]
+                    ):
                         continue
 
-                    payload = {"dad_id": dad_id, "mom_id": mom_id}
-                    while True:
-                        try:
-                            mix_response = requests.post(mix_url, headers=headers, json=payload, timeout=10)
-                            if mix_response.status_code == 200:
-                                mix_data = mix_response.json()
+                    if (dad["star"] <= 5 and mom["star"] <= 5) or (dad["star"] > 5 and mom["star"] > 5):
+                        payload = {"dad_id": dad["item_id"], "mom_id": mom["item_id"]}
 
-                                if "result" in mix_data and "pet" in mix_data["result"]:
-                                    pet_info = mix_data["result"]["pet"]
-                                    self.log(f"🎉 New pet created: {pet_info['name']} (ID: {pet_info['pet_id']})", Fore.GREEN)
-                                    # Mark the IDs as used
-                                    used_ids.add(dad_id)
-                                    used_ids.add(mom_id)
-                                    break
+                        while True:
+                            try:
+                                mix_response = requests.post(mix_url, headers=headers, json=payload, timeout=10)
+                                if mix_response.status_code == 200:
+                                    mix_data = mix_response.json()
+
+                                    if "result" in mix_data and "pet" in mix_data["result"]:
+                                        pet_info = mix_data["result"]["pet"]
+                                        self.log(
+                                            f"🎉 New pet created: {pet_info['name']} (ID: {pet_info['pet_id']})",
+                                            Fore.GREEN
+                                        )
+                                        used_ids.add(dad["item_id"])
+                                        used_ids.add(mom["item_id"])
+                                        break
+                                    else:
+                                        message = mix_data.get("message", "No message provided.")
+                                        self.log(
+                                            f"⚠️ Mixing failed for Dad {dad['item_id']}, Mom {mom['item_id']}: {message}",
+                                            Fore.YELLOW
+                                        )
+                                        break
+                                elif mix_response.status_code == 429:
+                                    self.log("⏳ Too many requests (429). Retrying in 5 seconds...", Fore.YELLOW)
+                                    time.sleep(5)
                                 else:
-                                    message = mix_data.get("message", "No message provided.")
-                                    self.log(f"⚠️ Mixing failed for Dad {dad_id}, Mom {mom_id}: {message}", Fore.YELLOW)
+                                    self.log(
+                                        f"❌ Request failed for Dad {dad['item_id']}, Mom {mom['item_id']} (Status: {mix_response.status_code})",
+                                        Fore.RED
+                                    )
                                     break
-                            elif mix_response.status_code == 429:
-                                self.log("⏳ Too many requests (429). Retrying in 5 seconds...", Fore.YELLOW)
-                                time.sleep(5)
-                            else:
-                                self.log(f"❌ Request failed for Dad {dad_id}, Mom {mom_id} (Status: {mix_response.status_code})", Fore.RED)
+                            except requests.exceptions.RequestException as e:
+                                self.log(
+                                    f"❌ Request failed for Dad {dad['item_id']}, Mom {mom['item_id']}: {e}",
+                                    Fore.RED
+                                )
                                 break
-                        except requests.exceptions.RequestException as e:
-                            self.log(f"❌ Request failed for Dad {dad_id}, Mom {mom_id}: {e}", Fore.RED)
-                            break
 
         except requests.exceptions.RequestException as e:
             self.log(f"❌ Request failed while fetching DNA list: {e}", Fore.RED)
