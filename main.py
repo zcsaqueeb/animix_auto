@@ -753,6 +753,171 @@ class animix:
         except requests.exceptions.RequestException as e:
             self.log(f"❌ An error occurred while processing season passes: {e}", Fore.RED)
 
+    def pvp(self) -> None:
+        """Handles fetching and displaying PvP user information."""
+        req_url_info = f"{self.BASE_URL}battle/user/info"
+        req_url_opponents = f"{self.BASE_URL}battle/user/opponents"
+        req_url_pets = f"{self.BASE_URL}pet/list"
+        req_url_attack = f"{self.BASE_URL}battle/attack"
+        headers = {**self.HEADERS, "tg-init-data": self.token}
+
+        try:
+            while True:
+                # Step 1: Fetch PvP user info
+                self.log("⏳ Fetching PvP user information...", Fore.CYAN)
+                response = requests.get(req_url_info, headers=headers)
+                response.raise_for_status()
+                data = response.json()
+
+                if "result" in data and isinstance(data["result"], dict):
+                    result = data["result"]
+
+                    # Extracting important details
+                    season_id = result.get("season_id", "N/A")
+                    tier_name = result.get("tier_name", "N/A")
+                    tier = result.get("tier", "N/A")
+                    score = result.get("score", 0)
+                    matches = result.get("match", 0)
+                    win_matches = result.get("win_match", 0)
+                    tickets = result.get("ticket", {}).get("amount", 0)
+                    defense_team = result.get("defense_team", [])
+
+                    # Logging the extracted details
+                    self.log(f"🌟 Season ID: {season_id}", Fore.GREEN)
+                    self.log(f"🏆 Tier: {tier_name} (Level {tier})", Fore.GREEN)
+                    self.log(f"📊 Score: {score}", Fore.GREEN)
+                    self.log(f"⚔️ Matches Played: {matches} | Wins: {win_matches}", Fore.GREEN)
+                    self.log(f"🎟️ Tickets Available: {tickets}", Fore.GREEN)
+
+                    if tickets <= 0:
+                        self.log("🎟️ No tickets remaining. PvP session ending.", Fore.YELLOW)
+                        break
+
+                    if defense_team:
+                        self.log("🛡️ Defense Team:", Fore.BLUE)
+                        for idx, pet in enumerate(defense_team, start=1):
+                            pet_id = pet.get("pet_id", "Unknown")
+                            level = pet.get("level", 0)
+                            self.log(f"   {idx}. Pet ID: {pet_id} | Level: {level}", Fore.BLUE)
+                    else:
+                        self.log("🛡️ Defense Team: None", Fore.YELLOW)
+
+                    # Step 2: Fetch user's pet list to find the best pets
+                    self.log("🔍 Fetching user pet list to find the best pets...", Fore.CYAN)
+                    response = requests.get(req_url_pets, headers=headers)
+                    response.raise_for_status()
+                    pets_data = response.json()
+
+                    best_pets = []
+                    if "result" in pets_data and isinstance(pets_data["result"], list):
+                        pets = pets_data["result"]
+                        # Menentukan 3 pet terbaik berdasarkan total skor atribut
+                        best_pets = sorted(
+                            pets,
+                            key=lambda pet: (
+                                pet.get("hp", 0) +
+                                pet.get("damage", 0) +
+                                pet.get("speed", 0) +
+                                pet.get("armor", 0)
+                            ),
+                            reverse=True
+                        )[:3]
+
+                        if best_pets:
+                            self.log("🐾 Best Pets Found:", Fore.GREEN)
+                            for idx, pet in enumerate(best_pets, start=1):
+                                pet_id = pet.get("pet_id", "Unknown")
+                                name = pet.get("name", "Unknown")
+                                hp = pet.get("hp", 0)
+                                damage = pet.get("damage", 0)
+                                speed = pet.get("speed", 0)
+                                armor = pet.get("armor", 0)
+
+                                self.log(
+                                    f"   {idx}. {name} (ID: {pet_id}) - "
+                                    f"HP: {hp}, Damage: {damage}, Speed: {speed}, Armor: {armor}",
+                                    Fore.GREEN
+                                )
+                        else:
+                            self.log("🚫 No pets found in the list.", Fore.RED)
+
+                    # Step 3: If tickets are available, fetch opponent information
+                    if tickets > 0:
+                        self.log("🎯 Tickets available. Fetching opponent information...", Fore.CYAN)
+                        response = requests.get(req_url_opponents, headers=headers)
+                        response.raise_for_status()
+                        opponent_data = response.json()
+
+                        if "result" in opponent_data and isinstance(opponent_data["result"], dict):
+                            opponent = opponent_data["result"].get("opponent", {})
+
+                            # Extract opponent details
+                            opponent_id = opponent.get("telegram_id", "Unknown")
+                            opponent_name = opponent.get("full_name", "Unknown")
+                            opponent_username = opponent.get("telegram_username", "Unknown")
+                            opponent_score = opponent.get("score", 0)
+                            opponent_pets = opponent.get("pets", [])
+
+                            # Log opponent details
+                            self.log(f"🎮 Opponent Found: {opponent_name} (@{opponent_username}) id: {opponent_id}", Fore.MAGENTA)
+                            self.log(f"📊 Opponent Score: {opponent_score}", Fore.MAGENTA)
+
+                            if opponent_pets:
+                                self.log("🐾 Opponent's Pets:", Fore.BLUE)
+                                for idx, pet in enumerate(opponent_pets, start=1):
+                                    pet_id = pet.get("pet_id", "Unknown")
+                                    level = pet.get("level", 0)
+                                    self.log(f"   {idx}. Pet ID: {pet_id} | Level: {level}", Fore.BLUE)
+                            else:
+                                self.log("🐾 Opponent's Pets: None", Fore.YELLOW)
+
+                            # Step 4: Execute attack if opponent and best pets are available
+                            if opponent_id != "Unknown" and len(best_pets) == 3:
+                                self.log("⚔️ Executing attack...", Fore.CYAN)
+                                payload = {
+                                    "opponent_id": opponent_id,
+                                    "pet_id_1": best_pets[0].get("pet_id"),
+                                    "pet_id_2": best_pets[1].get("pet_id"),
+                                    "pet_id_3": best_pets[2].get("pet_id")
+                                }
+                                response = requests.post(req_url_attack, headers=headers, json=payload)
+                                response.raise_for_status()
+                                attack_result = response.json()
+
+                                if "result" in attack_result and isinstance(attack_result["result"], dict):
+                                    result = attack_result["result"]
+                                    is_win = result.get("is_win", False)
+                                    score_gained = result.get("score", 0)
+                                    tickets = result.get("ticket", {}).get("amount", 0)
+
+                                    self.log("🏅 Attack Results:", Fore.GREEN)
+                                    for idx, round_info in enumerate(result.get("rounds", []), start=1):
+                                        attacker_id = round_info.get("attacker_pet_id", "Unknown")
+                                        defender_id = round_info.get("defender_pet_id", "Unknown")
+                                        round_result = "Win" if round_info.get("result", False) else "Lose"
+                                        self.log(f"   Round {idx}: Attacker {attacker_id} vs Defender {defender_id} - {round_result}", Fore.GREEN)
+
+                                    self.log(f"🎉 Victory! Gained Score: {score_gained}", Fore.GREEN) if is_win else self.log("💔 Defeat!", Fore.RED)
+                                    self.log(f"🎟️ Tickets Remaining: {tickets}", Fore.GREEN)
+
+                                    if tickets <= 0:
+                                        self.log("🎟️ No tickets remaining. PvP session ending.", Fore.YELLOW)
+                                        break
+                                else:
+                                    self.log("🚫 Failed to process attack results.", Fore.RED)
+                        else:
+                            self.log("🚫 Failed to fetch opponent information.", Fore.RED)
+
+                else:
+                    self.log("🚫 Failed to retrieve PvP information. No result found.", Fore.RED)
+
+        except requests.exceptions.RequestException as e:
+            self.log(f"❌ Request processing failed: {e}", Fore.RED)
+        except ValueError as e:
+            self.log(f"❌ Data error: {e}", Fore.RED)
+        except Exception as e:
+            self.log(f"❌ Unexpected error: {e}", Fore.RED)
+
 if __name__ == "__main__":
     ani = animix()
     index = 0
@@ -781,6 +946,7 @@ if __name__ == "__main__":
             "gacha": "🎰 Gacha",
             "mix": "🧬 DNA Mixing",
             "claim_pass": "🎟️ Claiming Pass Rewards",
+            "pvp": "⚔️ PvP Battles",
         }
 
         for task_key, task_name in tasks.items():

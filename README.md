@@ -1,4 +1,3 @@
----
 <h1 align="center">Animix Bot</h1>
 
 <p align="center">Automate tasks in Animix to enhance your efficiency and maximize your results!</p>
@@ -15,22 +14,17 @@ The Animix Bot is designed to automate various tasks in **Animix**, including:
 - **Automatic Missions**
 - **Automatic Quests**
 - **Pass Reward Automation**
+- **PvP Automation**
 - **Multi-Account Support**
 
 With this bot, you can save time and maximize your outcomes without manual interactions.
 
 ---
 
-## 🌟 **Version v1.0.6**
+## 🌟 **Version v1.1.0**
 
 ### **Updates**
-1. **Added**: Super gacha functionality.
-2. **Fixed**: Achievement claiming process.
-3. **Added**: Additional data information during login.
-4. **Fixed**: BUG in auto mix.
-
-### **Upcoming Updates**
-1. Implementing reward claims for super gacha.
+1. **Added**: Auto PvP functionality.
 
 ### **Features in This Version**:
 
@@ -40,6 +34,7 @@ With this bot, you can save time and maximize your outcomes without manual inter
 - **Auto Missions**: Complete missions automatically.
 - **Auto Quests**: Accomplish quests without manual intervention.
 - **Auto Claim Pass**: Automatically claim pass rewards.
+- **Auto PvP**: Engage in PvP battles and maximize rewards.
 - **Multi-Account Support**: Manage multiple accounts simultaneously.
 - **Delay Loop and Account Switching**: Set intervals for looping and account transitions.
 
@@ -67,8 +62,9 @@ Start using Animix by registering through the following link:
 | `mission`               | Complete missions automatically          | `True`      |
 | `quest`                 | Automate quest completion                | `True`      |
 | `claim_pass`            | Claim pass rewards automatically         | `True`      |
-| `delay_pergantian_akun` | Delay between account switches (seconds) | `10`        |
+| `pvp`                   | Engage in PvP battles automatically      | `True`      |
 | `delay_loop`            | Delay before the next loop (seconds)     | `3000`      |
+| `delay_account_switch`  | Delay between account switches (seconds) | `10`        |
 
 ---
 
@@ -115,6 +111,7 @@ Start using Animix by registering through the following link:
 - **Auto Missions**: Complete missions effortlessly.
 - **Auto Quests**: Automate quest completion.
 - **Auto Claim Pass**: Claim all pass rewards without delay.
+- **Auto PvP**: Compete in PvP battles and climb the leaderboard.
 - **Multi-Account Support**: Manage multiple accounts concurrently.
 
 ---
