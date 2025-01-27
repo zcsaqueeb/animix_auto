@@ -1,3 +1,5 @@
+---
+
 <h1 align="center">Animix Bot</h1>
 
 <p align="center">Automate tasks in Animix to enhance your efficiency and maximize your results!</p>
@@ -21,10 +23,12 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 **Version v1.1.1**
+## 🌟 **Version v1.1.2**
 
 ### **Updates**
-1. **Improved**: The mix system has been updated. Now, pets with stars below 5 will only be mixed with other pets that have stars below 5. Similarly, pets with 6 stars or more will only be mixed with pets that have 6 stars or more.
+1. **New**: Added defense setup system for PvP.
+2. **New**: Added pet upgrade system (only pets with 4 stars or higher will be upgraded).
+3. **Improved**: Mission handling system has been optimized to reduce processing time.
 
 ### **Features in This Version**:
 
@@ -35,6 +39,8 @@ With this bot, you can save time and maximize your outcomes without manual inter
 - **Auto Quests**: Accomplish quests without manual intervention.
 - **Auto Claim Pass**: Automatically claim pass rewards.
 - **Auto PvP**: Engage in PvP battles and maximize rewards.
+- **Defense Setup for PvP**: Configure your defense team for better PvP performance.
+- **Pet Upgrade System**: Automatically upgrade pets with 4 stars or higher.
 - **Multi-Account Support**: Manage multiple accounts simultaneously.
 - **Delay Loop and Account Switching**: Set intervals for looping and account transitions.
 
@@ -112,6 +118,8 @@ Start using Animix by registering through the following link:
 - **Auto Quests**: Automate quest completion.
 - **Auto Claim Pass**: Claim all pass rewards without delay.
 - **Auto PvP**: Compete in PvP battles and climb the leaderboard.
+- **Defense Setup for PvP**: Configure a solid defense team for PvP battles.
+- **Pet Upgrade System**: Upgrade only pets with 4 stars or more to save resources.
 - **Multi-Account Support**: Manage multiple accounts concurrently.
 
 ---

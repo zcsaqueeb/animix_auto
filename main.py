@@ -485,45 +485,30 @@ class animix:
             # Step 3: Claim available missions
             self.log("🔍 Claiming all available missions...", Fore.CYAN)
             for mission in missions:
-                if (
-                    mission.get("is_disabled")
-                    or mission.get("is_deleted")
-                    or mission.get("status")
-                ):
-                    self.log(
-                        f"⚠️ Mission {mission.get('mission_id')} skipped (disabled/deleted/already completed).",
-                        Fore.YELLOW,
-                    )
+                mission_id = mission.get("mission_id")
+                if not mission_id:
                     continue
 
-                claim_url = f"{self.BASE_URL}mission/claim"
-                claim_payload = {"mission_id": mission.get("mission_id")}
-                claim_response = requests.post(claim_url, headers=headers, json=claim_payload)
+                # Check if mission can be claimed
+                if mission.get("can_completed"):
+                    claim_url = f"{self.BASE_URL}mission/claim"
+                    claim_payload = {"mission_id": mission_id}
+                    claim_response = requests.post(claim_url, headers=headers, json=claim_payload)
 
-                if claim_response.status_code == 200:
-                    self.log(
-                        f"✅ Mission {mission.get('mission_id')} successfully claimed.",
-                        Fore.GREEN,
-                    )
+                    if claim_response.status_code == 200:
+                        self.log(f"✅ Mission {mission_id} successfully claimed.", Fore.GREEN)
+                    else:
+                        self.log(f"❌ Failed to claim mission {mission_id} (Error: {claim_response.status_code}).", Fore.RED)
+                        self.log(f"🔍 Claim response details: {claim_response.text}", Fore.RED)
                 else:
-                    self.log(
-                        f"❌ Failed to claim mission {mission.get('mission_id')} (Error: {claim_response.status_code}).",
-                        Fore.RED,
-                    )
-                    self.log(f"🔍 Claim response details: {claim_response.text}", Fore.RED)
+                    self.log(f"⚠️ Mission {mission_id} cannot be claimed yet.", Fore.YELLOW)
 
             # Step 4: Send pets to complete eligible missions
             self.log("🔍 Filtering missions and assigning pets...", Fore.CYAN)
             for mission in missions:
-                if (
-                    mission.get("is_disabled")
-                    or mission.get("is_deleted")
-                    or mission.get("status")
-                ):
-                    self.log(
-                        f"⚠️ Mission {mission.get('mission_id')} skipped (disabled/deleted/already completed).",
-                        Fore.YELLOW,
-                    )
+                mission_id = mission.get("mission_id")
+                if not mission_id or mission.get("can_completed") or mission.get("pet_joined"):
+                    self.log(f"⚠️ Mission {mission_id} skipped (already completed or pets deployed).", Fore.YELLOW)
                     continue
 
                 required_pets = [
@@ -535,61 +520,45 @@ class animix:
                 ]
 
                 available_pets = pets.copy()
+
                 while True:
                     pet_ids = []
+
                     for req in required_pets:
                         for pet in available_pets:
                             if (
                                 pet.get("class") == req["class"]
                                 and pet.get("star", 0) >= req["star"]
-                                and pet.get("id") not in pet_ids
+                                and pet.get("pet_id") not in pet_ids
                             ):
                                 pet_ids.append(pet["pet_id"])
                                 available_pets.remove(pet)
                                 break
 
                     if len(pet_ids) == 3:
-                        self.log(
-                            f"➡️ Assigning pets to mission {mission.get('mission_id')}...",
-                            Fore.CYAN,
-                        )
+                        self.log(f"➡️ Assigning pets to mission {mission_id}...", Fore.CYAN)
 
                         enter_url = f"{self.BASE_URL}mission/enter"
                         payload = {
-                            "mission_id": mission.get("mission_id"),
+                            "mission_id": mission_id,
                             **{f"pet_{i+1}_id": pet_id for i, pet_id in enumerate(pet_ids)},
                         }
                         enter_response = requests.post(enter_url, headers=headers, json=payload)
 
                         if enter_response.status_code == 200:
-                            self.log(
-                                f"✅ Mission {mission.get('mission_id')} successfully started.",
-                                Fore.GREEN,
-                            )
+                            self.log(f"✅ Mission {mission_id} successfully started.", Fore.GREEN)
                             break
                         else:
-                            self.log(
-                                f"❌ Failed to start mission {mission.get('mission_id')} (Error: {enter_response.status_code}).",
-                                Fore.RED,
-                            )
-                            self.log(
-                                f"🔍 Mission start response details: {enter_response.text}",
-                                Fore.RED,
-                            )
+                            self.log(f"❌ Failed to start mission {mission_id} (Error: {enter_response.status_code}).", Fore.RED)
+                            self.log(f"🔍 Mission start response details: {enter_response.text}", Fore.RED)
 
                             if "PET_BUSY" in enter_response.text:
-                                self.log(
-                                    f"🔄 Retrying with different pets for mission {mission.get('mission_id')}...",
-                                    Fore.YELLOW,
-                                )
+                                self.log(f"🔄 Retrying with different pets for mission {mission_id}...", Fore.YELLOW)
                                 continue
                             else:
                                 break
                     else:
-                        self.log(
-                            f"❌ Mission {mission.get('mission_id')} does not meet pet requirements.",
-                            Fore.RED,
-                        )
+                        self.log(f"❌ Mission {mission_id} does not meet pet requirements.", Fore.RED)
                         break
 
         except requests.exceptions.RequestException as e:
@@ -779,6 +748,9 @@ class animix:
         req_url_opponents = f"{self.BASE_URL}battle/user/opponents"
         req_url_pets = f"{self.BASE_URL}pet/list"
         req_url_attack = f"{self.BASE_URL}battle/attack"
+        req_url_set_defense = f"{self.BASE_URL}battle/user/defense-team"
+        req_url_upgrade_check = f"{self.BASE_URL}battle/pet/level-up/required"
+        req_url_upgrade = f"{self.BASE_URL}battle/pet/level-up"
         headers = {**self.HEADERS, "tg-init-data": self.token}
 
         try:
@@ -822,8 +794,8 @@ class animix:
                     else:
                         self.log("🛡️ Defense Team: None", Fore.YELLOW)
 
-                    # Step 2: Fetch user's pet list to find the best pets
-                    self.log("🔍 Fetching user pet list to find the best pets...", Fore.CYAN)
+                    # Step 2: Fetch user's pet list
+                    self.log("🔍 Fetching user pet list...", Fore.CYAN)
                     response = requests.get(req_url_pets, headers=headers)
                     response.raise_for_status()
                     pets_data = response.json()
@@ -831,7 +803,34 @@ class animix:
                     best_pets = []
                     if "result" in pets_data and isinstance(pets_data["result"], list):
                         pets = pets_data["result"]
-                        # Menentukan 3 pet terbaik berdasarkan total skor atribut
+
+                        # Step 2.1: Upgrade eligible pets (4-star and above with amount > 1)
+                        self.log("⚙️ Checking for pets eligible for upgrade...", Fore.CYAN)
+                        for pet in pets:
+                            if pet.get("star", 0) >= 4 and pet.get("amount", 0) > 1:
+                                pet_id = pet.get("pet_id")
+                                payload = {"pet_id": pet_id}
+                                response = requests.post(req_url_upgrade_check, headers=headers, json=payload)
+                                response.raise_for_status()
+                                upgrade_data = response.json()
+
+                                if "result" in upgrade_data and isinstance(upgrade_data["result"], dict):
+                                    required = upgrade_data["result"].get("required", [])[0]
+                                    materials = upgrade_data["result"].get("materials", [])[0]
+
+                                    if required["available"] >= required["amount"] and materials["available"] >= materials["amount"]:
+                                        self.log(f"🔧 Upgrading pet ID {pet_id}...", Fore.CYAN)
+                                        response = requests.post(req_url_upgrade, headers=headers, json=payload)
+                                        response.raise_for_status()
+                                        upgrade_result = response.json()
+
+                                        if "result" in upgrade_result and upgrade_result["result"].get("status", False):
+                                            new_level = upgrade_result["result"].get("level")
+                                            self.log(f"✅ Pet ID {pet_id} upgraded to Level {new_level}", Fore.GREEN)
+                                        else:
+                                            self.log(f"🚫 Failed to upgrade pet ID {pet_id}", Fore.RED)
+
+                        # Step 2.2: Determine the 3 best pets based on total attribute scores
                         best_pets = sorted(
                             pets,
                             key=lambda pet: (
@@ -858,6 +857,24 @@ class animix:
                                     f"HP: {hp}, Damage: {damage}, Speed: {speed}, Armor: {armor}",
                                     Fore.GREEN
                                 )
+
+                            # Step 2.3: Set Defense Team using the best pets
+                            self.log("🛡️ Setting defense team with the best pets...", Fore.CYAN)
+                            payload = {
+                                "pet_id_1": best_pets[0].get("pet_id"),
+                                "pet_id_2": best_pets[1].get("pet_id"),
+                                "pet_id_3": best_pets[2].get("pet_id")
+                            }
+
+                            response = requests.post(req_url_set_defense, headers=headers, json=payload)
+                            response.raise_for_status()
+                            defense_result = response.json()
+
+                            if "result" in defense_result and isinstance(defense_result["result"], dict):
+                                self.log("✅ Defense team successfully updated!", Fore.GREEN)
+                            else:
+                                self.log("🚫 Failed to update defense team.", Fore.RED)
+
                         else:
                             self.log("🚫 No pets found in the list.", Fore.RED)
 
