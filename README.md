@@ -23,12 +23,13 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 **Version v1.1.2**
+## 🌟 **Version v1.1.3**
 
 ### **Updates**
-1. **New**: Added defense setup system for PvP.
-2. **New**: Added pet upgrade system (only pets with 4 stars or higher will be upgraded).
-3. **Improved**: Mission handling system has been optimized to reduce processing time.
+1. **Fixed**: Resolved a bug in the pet upgrade system.
+2. **Improved**: Enhanced the season pass claim system for faster processing compared to the previous version.
+
+---
 
 ### **Features in This Version**:
 

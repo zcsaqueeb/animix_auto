@@ -28,6 +28,7 @@ class animix:
         self.token = None
         self.token_reguler = 0
         self.token_super = 0
+        self.premium_user = False
 
     def banner(self) -> None:
         """Displays the banner for the bot."""
@@ -115,6 +116,7 @@ class animix:
                     else 0
                 )
                 self.token = token
+                self.premium_user = user_info.get("is_premium", False)
 
                 self.log("✅ Login successful!", Fore.GREEN)
                 self.log(f"👤 Username: {username}", Fore.LIGHTGREEN_EX)
@@ -697,47 +699,48 @@ class animix:
                                 Fore.RED,
                             )
 
-                # Step 4: Claim premium rewards
-                premium_rewards = season.get("premium_rewards", [])
-                for reward in premium_rewards:
-                    step = reward.get("step")
-                    is_claimed = reward.get("is_claimed", True)
+                # Step 4: Claim premium rewards if the user is premium
+                if getattr(self, "premium_user", False):
+                    premium_rewards = season.get("premium_rewards", [])
+                    for reward in premium_rewards:
+                        step = reward.get("step")
+                        is_claimed = reward.get("is_claimed", True)
 
-                    try:
-                        step = int(step)
-                    except (ValueError, TypeError):
-                        self.log(
-                            f"❌ Invalid `step` value for premium reward in season {season_id}, skipping this reward.",
-                            Fore.RED,
-                        )
-                        continue
-
-                    if not is_claimed and step <= current_step:
-                        self.log(
-                            f"➡️ Claiming premium reward for season {season_id}, step {step}...",
-                            Fore.CYAN,
-                        )
-
-                        claim_url = f"{self.BASE_URL}season-pass/claim"
-                        payload = {
-                            "season_id": season_id,
-                            "step": step,
-                            "type": "premium",
-                        }
-                        claim_response = requests.post(
-                            claim_url, headers=headers, json=payload
-                        )
-
-                        if claim_response.status_code == 200:
+                        try:
+                            step = int(step)
+                        except (ValueError, TypeError):
                             self.log(
-                                f"✅ Successfully claimed premium reward at step {step}.",
-                                Fore.GREEN,
-                            )
-                        else:
-                            self.log(
-                                f"❌ Failed to claim reward at step {step} (Error: {claim_response.status_code}).",
+                                f"❌ Invalid `step` value for premium reward in season {season_id}, skipping this reward.",
                                 Fore.RED,
                             )
+                            continue
+
+                        if not is_claimed and step <= current_step:
+                            self.log(
+                                f"➡️ Claiming premium reward for season {season_id}, step {step}...",
+                                Fore.CYAN,
+                            )
+
+                            claim_url = f"{self.BASE_URL}season-pass/claim"
+                            payload = {
+                                "season_id": season_id,
+                                "step": step,
+                                "type": "premium",
+                            }
+                            claim_response = requests.post(
+                                claim_url, headers=headers, json=payload
+                            )
+
+                            if claim_response.status_code == 200:
+                                self.log(
+                                    f"✅ Successfully claimed premium reward at step {step}.",
+                                    Fore.GREEN,
+                                )
+                            else:
+                                self.log(
+                                    f"❌ Failed to claim reward at step {step} (Error: {claim_response.status_code}).",
+                                    Fore.RED,
+                                )
 
         except requests.exceptions.RequestException as e:
             self.log(f"❌ An error occurred while processing season passes: {e}", Fore.RED)
@@ -810,7 +813,7 @@ class animix:
                             if pet.get("star", 0) >= 4 and pet.get("amount", 0) > 1:
                                 pet_id = pet.get("pet_id")
                                 payload = {"pet_id": pet_id}
-                                response = requests.post(req_url_upgrade_check, headers=headers, json=payload)
+                                response = requests.get(f"{req_url_upgrade_check}?pet_id={pet_id}", headers=headers, json=payload)
                                 response.raise_for_status()
                                 upgrade_data = response.json()
 
