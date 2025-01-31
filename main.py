@@ -3,6 +3,7 @@ import json
 import time
 from colorama import Fore
 import requests
+import random
 
 class animix:
 
@@ -29,6 +30,14 @@ class animix:
         self.token_reguler = 0
         self.token_super = 0
         self.premium_user = False
+        self._original_requests = {
+            "get": requests.get,
+            "post": requests.post,
+            "put": requests.put,
+            "delete": requests.delete
+        }
+        self.proxy_session = None
+        self.config = self.load_config()
 
     def banner(self) -> None:
         """Displays the banner for the bot."""
@@ -958,6 +967,76 @@ class animix:
         except Exception as e:
             self.log(f"❌ Unexpected error: {e}", Fore.RED)
 
+    def load_proxies(self, filename="proxy.txt"):
+        """
+        Reads proxies from a file and returns them as a list.
+        
+        Args:
+            filename (str): The path to the proxy file.
+        
+        Returns:
+            list: A list of proxy addresses.
+        """
+        try:
+            with open(filename, "r", encoding="utf-8") as file:
+                proxies = [line.strip() for line in file if line.strip()]
+            if not proxies:
+                raise ValueError("Proxy file is empty.")
+            return proxies
+        except Exception as e:
+            self.log(f"❌ Failed to load proxies: {e}", Fore.RED)
+            return []
+
+    def set_proxy_session(self, proxies: list) -> requests.Session:
+        """
+        Creates a requests session with a proxy based on the given index.
+        
+        Args:
+            index (int): The index of the proxy to use.
+            proxies (list): A list of proxy addresses.
+        
+        Returns:
+            requests.Session: A session object with the proxy set.
+        """
+        if not proxies:
+            self.log("⚠️ No proxies available. Using direct connection.", Fore.YELLOW)
+            self.proxy_session = requests.Session()
+            return self.proxy_session
+
+        proxy_url = random.choice(proxies)
+        self.proxy_session = requests.Session()
+        self.proxy_session.proxies = {"http": proxy_url, "https": proxy_url}
+
+        try:
+            test_url = "https://httpbin.org/ip"
+            response = self.proxy_session.get(test_url, timeout=5)
+            response.raise_for_status()
+            self.log(f"✅ Using Proxy: {proxy_url} | Your IP: {response.json().get('origin')}", Fore.GREEN)
+        except requests.RequestException as e:
+            self.log(f"❌ Proxy failed: {proxy_url} | Error: {e}", Fore.RED)
+
+        return self.proxy_session
+    
+    def override_requests(self):
+        """Override requests functions globally when proxy is enabled."""
+        if self.config.get("proxy", False):
+            self.log("[CONFIG] 🛡️ Proxy: ✅ Enabled", Fore.YELLOW)
+            proxies = self.load_proxies()
+            self.set_proxy_session(proxies)
+
+            # Override request methods
+            requests.get = self.proxy_session.get
+            requests.post = self.proxy_session.post
+            requests.put = self.proxy_session.put
+            requests.delete = self.proxy_session.delete
+        else:
+            self.log("[CONFIG] proxy: ❌ Disabled", Fore.RED)
+            # Restore original functions if proxy is disabled
+            requests.get = self._original_requests["get"]
+            requests.post = self._original_requests["post"]
+            requests.put = self._original_requests["put"]
+            requests.delete = self._original_requests["delete"]
+
 if __name__ == "__main__":
     ani = animix()
     index = 0
@@ -973,6 +1052,8 @@ if __name__ == "__main__":
         display_account = current_account[:10] + "..." if len(current_account) > 10 else current_account
 
         ani.log(f"👤 [ACCOUNT] Processing account {index + 1}/{max_index}: {display_account}", Fore.YELLOW)
+
+        ani.override_requests()
 
         # Perform login for the current account
         ani.login(index)

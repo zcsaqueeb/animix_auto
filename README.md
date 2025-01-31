@@ -18,16 +18,22 @@ The Animix Bot is designed to automate various tasks in **Animix**, including:
 - **Pass Reward Automation**
 - **PvP Automation**
 - **Multi-Account Support**
+- **Proxy Support**
 
 With this bot, you can save time and maximize your outcomes without manual interactions.
 
 ---
 
-## 🌟 **Version v1.1.3**
+## 🌟 **Version v1.1.4**
 
 ### **Updates**
-1. **Fixed**: Resolved a bug in the pet upgrade system.
-2. **Improved**: Enhanced the season pass claim system for faster processing compared to the previous version.
+
+1. **New Feature**: AniMix bot now supports proxies! You can use HTTP proxies in the format:
+   - http\://username\:password\@ip\:port
+
+Now, each account session will use a different proxy dynamically, ensuring better anonymity and rotation support.
+
+Stay tuned for more updates! ✨
 
 ---
 
@@ -43,6 +49,7 @@ With this bot, you can save time and maximize your outcomes without manual inter
 - **Defense Setup for PvP**: Configure your defense team for better PvP performance.
 - **Pet Upgrade System**: Automatically upgrade pets with 4 stars or higher.
 - **Multi-Account Support**: Manage multiple accounts simultaneously.
+- **Proxy Support**: Assign different proxies for each account dynamically.
 - **Delay Loop and Account Switching**: Set intervals for looping and account transitions.
 
 ---
@@ -61,47 +68,56 @@ Start using Animix by registering through the following link:
 
 ## ⚙️ **Configuration in `config.json`**
 
-| **Function**            | **Description**                          | **Default** |
-| ----------------------- | ---------------------------------------- | ----------- |
-| `gacha`                 | Automate gacha pulls                     | `True`      |
-| `achievements`          | Claim achievements automatically         | `True`      |
-| `mix`                   | Automate DNA mixing                      | `True`      |
-| `mission`               | Complete missions automatically          | `True`      |
-| `quest`                 | Automate quest completion                | `True`      |
-| `claim_pass`            | Claim pass rewards automatically         | `True`      |
-| `pvp`                   | Engage in PvP battles automatically      | `True`      |
-| `delay_loop`            | Delay before the next loop (seconds)     | `3000`      |
-| `delay_account_switch`  | Delay between account switches (seconds) | `10`        |
+| **Function**           | **Description**                          | **Default** |
+| ---------------------- | ---------------------------------------- | ----------- |
+| `gacha`                | Automate gacha pulls                     | `True`      |
+| `achievements`         | Claim achievements automatically         | `True`      |
+| `mix`                  | Automate DNA mixing                      | `True`      |
+| `mission`              | Complete missions automatically          | `True`      |
+| `quest`                | Automate quest completion                | `True`      |
+| `claim_pass`           | Claim pass rewards automatically         | `True`      |
+| `pvp`                  | Engage in PvP battles automatically      | `True`      |
+| `proxy`                | Enable/Disable proxy usage               | `False`     |
+| `delay_loop`           | Delay before the next loop (seconds)     | `3000`      |
+| `delay_account_switch` | Delay between account switches (seconds) | `10`        |
 
 ---
 
 ## 📖 **Installation Steps**
 
-1. **Clone the Repository**  
+1. **Clone the Repository**\
    Copy the project to your local machine:
 
    ```bash
    git clone https://github.com/livexords-nw/Animix-bot.git
    ```
 
-2. **Navigate to the Project Folder**  
+2. **Navigate to the Project Folder**\
    Move to the project directory:
 
    ```bash
    cd Animix-bot
    ```
 
-3. **Install Dependencies**  
+3. **Install Dependencies**\
    Install the required libraries:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Configure Query**  
+4. **Configure Query**\
    Create a `query.txt` file and add your Animix query data.
 
-5. **Run the Bot**  
+5. **Set Up Proxy (Optional)**\
+   To use a proxy, create a `proxy.txt` file and add proxies in the format:
+
+   ```
+   http://username:password@ip:port
+   ```
+   - Only HTTP and HTTPS proxies are supported.
+
+6. **Run the Bot**\
    Execute the bot using the following command:
 
    ```bash
@@ -110,18 +126,7 @@ Start using Animix by registering through the following link:
 
 ---
 
-## 🚀 **Key Features Overview**
-
-- **Auto Gacha**: Perform gacha tasks seamlessly.
-- **Auto Achievements**: Automatically claim all achievements.
-- **Auto Mix**: Combine DNA and create new pets with ease.
-- **Auto Missions**: Complete missions effortlessly.
-- **Auto Quests**: Automate quest completion.
-- **Auto Claim Pass**: Claim all pass rewards without delay.
-- **Auto PvP**: Compete in PvP battles and climb the leaderboard.
-- **Defense Setup for PvP**: Configure a solid defense team for PvP battles.
-- **Pet Upgrade System**: Upgrade only pets with 4 stars or more to save resources.
-- **Multi-Account Support**: Manage multiple accounts concurrently.
+### 🔹 Want Free Proxies? You can obtain free proxies from [Webshare.io](https://www.webshare.io/).
 
 ---
 
