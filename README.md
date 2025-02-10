@@ -24,14 +24,13 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 **Version v1.1.4**
+## 🌟 **Version v1.1.5**
 
 ### **Updates**
 
-1. **New Feature**: AniMix bot now supports proxies! You can use HTTP proxies in the format:
-   - http\://username\:password\@ip\:port
-
-Now, each account session will use a different proxy dynamically, ensuring better anonymity and rotation support.
+1. **Optimization**: Improved the gacha system for enhanced performance and user experience.
+2. **Optimization**: Refined the mission system to boost efficiency and stability.
+3. **Optimization**: Upgraded the proxy system for smoother integration and better rotation support.
 
 Stay tuned for more updates! ✨
 

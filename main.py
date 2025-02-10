@@ -299,6 +299,52 @@ class animix:
                 self.log(f"❌ Unexpected error: {e}", Fore.RED)
                 continue
 
+            time.sleep(1)
+            if self.token_reguler == 0 or self.token_super == 0:
+                self.log("🔄 Refreshing gacha points after spinning gacha...", Fore.CYAN)
+                req_url = f"{self.BASE_URL}user/info"
+                headers = {**self.HEADERS, "Tg-Init-Data": self.token}
+
+                try:
+                    response = requests.get(req_url, headers=headers)
+                    response.raise_for_status()
+                    data = response.json()
+
+                    if "result" in data:
+                        user_info = data["result"]
+                        username = user_info.get("telegram_username", "Unknown")
+                        balance = user_info.get("token", 0)
+
+                        inventory = user_info.get("inventory", [])
+                        token_reguler = next((item for item in inventory if item["id"] == 1), None)
+                        token_super = next((item for item in inventory if item["id"] == 3), None)
+
+                        if token_reguler:
+                            self.log(f"💵 Regular Token: {token_reguler['amount']}", Fore.LIGHTBLUE_EX)
+                            self.token_reguler = token_reguler['amount']
+                        else:
+                            self.log(f"💵 Regular Token: 0", Fore.LIGHTBLUE_EX)
+
+                        if token_super:
+                            self.log(f"💸 Super Token: {token_super['amount']}", Fore.LIGHTBLUE_EX)
+                            self.token_super = token_super['amount']
+                        else:
+                            self.log(f"💸 Super Token: 0", Fore.LIGHTBLUE_EX)
+
+                    else:
+                        self.log(
+                            "⚠️ Unexpected response structure.", Fore.YELLOW
+                        )
+
+                except requests.exceptions.RequestException as e:
+                    self.log(f"❌ Failed to send Refresh request: {e}", Fore.RED)
+                except ValueError as e:
+                    self.log(f"❌ Data error (possible JSON issue): {e}", Fore.RED)
+                except KeyError as e:
+                    self.log(f"❌ Key error: {e}", Fore.RED)
+                except Exception as e:
+                    self.log(f"❌ Unexpected error: {e}", Fore.RED)
+
     def mix(self) -> None:
         """Combines DNA to create new pets based on star level and can_mom constraints."""
         req_url = f"{self.BASE_URL}pet/dna/list"
@@ -451,7 +497,7 @@ class animix:
             self.log(f"❌ Unexpected error: {e}", Fore.RED)
 
     def mission(self) -> None:
-        """Handles fetching and completing missions."""
+        """Handles fetching, claiming, and deploying pets to missions."""
         headers = {**self.HEADERS, "Tg-Init-Data": self.token}
 
         try:
@@ -500,7 +546,7 @@ class animix:
                 if not mission_id:
                     continue
 
-                # Check if mission can be claimed
+                # Check if the mission can be claimed
                 if mission.get("can_completed"):
                     claim_url = f"{self.BASE_URL}mission/claim"
                     claim_payload = {"mission_id": mission_id}
@@ -509,19 +555,64 @@ class animix:
                     if claim_response.status_code == 200:
                         self.log(f"✅ Mission {mission_id} successfully claimed.", Fore.GREEN)
                     else:
-                        self.log(f"❌ Failed to claim mission {mission_id} (Error: {claim_response.status_code}).", Fore.RED)
+                        self.log(
+                            f"❌ Failed to claim mission {mission_id} (Error: {claim_response.status_code}).",
+                            Fore.RED,
+                        )
                         self.log(f"🔍 Claim response details: {claim_response.text}", Fore.RED)
                 else:
                     self.log(f"⚠️ Mission {mission_id} cannot be claimed yet.", Fore.YELLOW)
 
-            # Step 4: Send pets to complete eligible missions
+            # === REFRESH MISSION LIST AFTER CLAIMING ===
+            self.log("🔄 Refreshing mission list after claiming missions...", Fore.CYAN)
+            refreshed_response = requests.get(mission_url, headers=headers)
+            refreshed_response.raise_for_status()
+            try:
+                refreshed_data = refreshed_response.json()
+            except ValueError:
+                self.log("❌ Refreshed mission response is not valid JSON.", Fore.RED)
+                return
+
+            missions = refreshed_data.get("result", [])
+            if not isinstance(missions, list):
+                self.log("❌ Invalid refreshed mission data format (expected a list).", Fore.RED)
+                return
+
+            self.log("✅ Successfully refreshed the mission list.", Fore.GREEN)
+
+            # === RECORD BUSY PETS FROM MISSION 'pet_joined' DATA ===
+            busy_pets = set()
+            for mission in missions:
+                mission_id = mission.get("mission_id")
+                pet_joined = mission.get("pet_joined")
+                if pet_joined and isinstance(pet_joined, list) and len(pet_joined) > 0:
+                    # Record each pet_id that is already deployed
+                    for pet_info in pet_joined:
+                        pet_id = pet_info.get("pet_id")
+                        if pet_id:
+                            busy_pets.add(pet_id)
+                    self.log(
+                        f"ℹ️ Mission {mission_id} already has assigned pets: {[pet_info.get('pet_id') for pet_info in pet_joined if pet_info.get('pet_id')]}.",
+                        Fore.MAGENTA,
+                    )
+
+            # Step 4: Assign pets to missions that are eligible for pet deployment
             self.log("🔍 Filtering missions and assigning pets...", Fore.CYAN)
             for mission in missions:
                 mission_id = mission.get("mission_id")
-                if not mission_id or mission.get("can_completed") or mission.get("pet_joined"):
-                    self.log(f"⚠️ Mission {mission_id} skipped (already completed or pets deployed).", Fore.YELLOW)
+                if not mission_id:
                     continue
 
+                # Skip missions that already have joined pets or are still claimable
+                if mission.get("pet_joined") and len(mission.get("pet_joined")) > 0:
+                    self.log(f"⚠️ Mission {mission_id} skipped (already has pets assigned).", Fore.YELLOW)
+                    continue
+
+                if mission.get("can_completed"):
+                    self.log(f"⚠️ Mission {mission_id} skipped (mission not ready for pet assignment).", Fore.YELLOW)
+                    continue
+
+                # Build the required pet information for the mission
                 required_pets = [
                     {
                         "class": mission.get(f"pet_{i}_class"),
@@ -530,7 +621,8 @@ class animix:
                     for i in range(1, 4)
                 ]
 
-                available_pets = pets.copy()
+                # Filter out busy pets from the available pets list, keeping the busy pet system intact
+                available_pets = [pet for pet in pets if pet.get("pet_id") not in busy_pets]
 
                 while True:
                     pet_ids = []
@@ -558,9 +650,14 @@ class animix:
 
                         if enter_response.status_code == 200:
                             self.log(f"✅ Mission {mission_id} successfully started.", Fore.GREEN)
+                            # Mark these pets as busy so they won't be reused
+                            busy_pets.update(pet_ids)
                             break
                         else:
-                            self.log(f"❌ Failed to start mission {mission_id} (Error: {enter_response.status_code}).", Fore.RED)
+                            self.log(
+                                f"❌ Failed to start mission {mission_id} (Error: {enter_response.status_code}).",
+                                Fore.RED,
+                            )
                             self.log(f"🔍 Mission start response details: {enter_response.text}", Fore.RED)
 
                             if "PET_BUSY" in enter_response.text:
@@ -989,32 +1086,48 @@ class animix:
 
     def set_proxy_session(self, proxies: list) -> requests.Session:
         """
-        Creates a requests session with a proxy based on the given index.
+        Creates a requests session with a working proxy from the given list.
         
+        If a chosen proxy fails the connectivity test, it will try another proxy
+        until a working one is found. If no proxies work or the list is empty, it
+        will return a session with a direct connection.
+
         Args:
-            index (int): The index of the proxy to use.
-            proxies (list): A list of proxy addresses.
+            proxies (list): A list of proxy addresses (e.g., "http://proxy_address:port").
         
         Returns:
-            requests.Session: A session object with the proxy set.
+            requests.Session: A session object configured with a working proxy,
+                            or a direct connection if none are available.
         """
+        # If no proxies are provided, use a direct connection.
         if not proxies:
             self.log("⚠️ No proxies available. Using direct connection.", Fore.YELLOW)
             self.proxy_session = requests.Session()
             return self.proxy_session
 
-        proxy_url = random.choice(proxies)
+        # Copy the list so that we can modify it without affecting the original.
+        available_proxies = proxies.copy()
+
+        while available_proxies:
+            proxy_url = random.choice(available_proxies)
+            self.proxy_session = requests.Session()
+            self.proxy_session.proxies = {"http": proxy_url, "https": proxy_url}
+
+            try:
+                test_url = "https://httpbin.org/ip"
+                response = self.proxy_session.get(test_url, timeout=5)
+                response.raise_for_status()
+                origin_ip = response.json().get("origin", "Unknown IP")
+                self.log(f"✅ Using Proxy: {proxy_url} | Your IP: {origin_ip}", Fore.GREEN)
+                return self.proxy_session
+            except requests.RequestException as e:
+                self.log(f"❌ Proxy failed: {proxy_url} | Error: {e}", Fore.RED)
+                # Remove the failed proxy and try again.
+                available_proxies.remove(proxy_url)
+        
+        # If none of the proxies worked, use a direct connection.
+        self.log("⚠️ All proxies failed. Using direct connection.", Fore.YELLOW)
         self.proxy_session = requests.Session()
-        self.proxy_session.proxies = {"http": proxy_url, "https": proxy_url}
-
-        try:
-            test_url = "https://httpbin.org/ip"
-            response = self.proxy_session.get(test_url, timeout=5)
-            response.raise_for_status()
-            self.log(f"✅ Using Proxy: {proxy_url} | Your IP: {response.json().get('origin')}", Fore.GREEN)
-        except requests.RequestException as e:
-            self.log(f"❌ Proxy failed: {proxy_url} | Error: {e}", Fore.RED)
-
         return self.proxy_session
     
     def override_requests(self):
@@ -1042,6 +1155,8 @@ if __name__ == "__main__":
     index = 0
     max_index = len(ani.query_list)
     config = ani.load_config()
+    if config.get("proxy", False):
+        proxies = ani.load_proxies()
 
     ani.log("🎉 [LIVEXORDS] === Welcome to AniMix Automation === [LIVEXORDS]", Fore.YELLOW)
     ani.log(f"📂 Loaded {max_index} accounts from query list.", Fore.YELLOW)
@@ -1053,7 +1168,10 @@ if __name__ == "__main__":
 
         ani.log(f"👤 [ACCOUNT] Processing account {index + 1}/{max_index}: {display_account}", Fore.YELLOW)
 
-        ani.override_requests()
+        if config.get("proxy", False):
+            ani.override_requests()
+        else:
+            ani.log("[CONFIG] Proxy: ❌ Disabled", Fore.RED)
 
         # Perform login for the current account
         ani.login(index)
