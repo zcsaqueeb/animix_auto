@@ -581,18 +581,20 @@ class animix:
             self.log("✅ Successfully refreshed the mission list.", Fore.GREEN)
 
             # === RECORD BUSY PETS FROM MISSION 'pet_joined' DATA ===
-            busy_pets = set()
+            # Gunakan dictionary untuk melacak berapa kali sebuah pet sedang digunakan
+            busy_pets = {}
             for mission in missions:
                 mission_id = mission.get("mission_id")
                 pet_joined = mission.get("pet_joined")
                 if pet_joined and isinstance(pet_joined, list) and len(pet_joined) > 0:
-                    # Record each pet_id that is already deployed
+                    pet_ids_in_mission = []
                     for pet_info in pet_joined:
                         pet_id = pet_info.get("pet_id")
                         if pet_id:
-                            busy_pets.add(pet_id)
+                            busy_pets[pet_id] = busy_pets.get(pet_id, 0) + 1
+                            pet_ids_in_mission.append(pet_id)
                     self.log(
-                        f"ℹ️ Mission {mission_id} already has assigned pets: {[pet_info.get('pet_id') for pet_info in pet_joined if pet_info.get('pet_id')]}.",
+                        f"ℹ️ Mission {mission_id} already has assigned pets: {pet_ids_in_mission}.",
                         Fore.MAGENTA,
                     )
 
@@ -603,7 +605,7 @@ class animix:
                 if not mission_id:
                     continue
 
-                # Skip missions that already have joined pets or are still claimable
+                # Skip missions yang sudah punya pet atau masih bisa diklaim
                 if mission.get("pet_joined") and len(mission.get("pet_joined")) > 0:
                     self.log(f"⚠️ Mission {mission_id} skipped (already has pets assigned).", Fore.YELLOW)
                     continue
@@ -612,7 +614,7 @@ class animix:
                     self.log(f"⚠️ Mission {mission_id} skipped (mission not ready for pet assignment).", Fore.YELLOW)
                     continue
 
-                # Build the required pet information for the mission
+                # Build required pet information for the mission
                 required_pets = [
                     {
                         "class": mission.get(f"pet_{i}_class"),
@@ -621,12 +623,16 @@ class animix:
                     for i in range(1, 4)
                 ]
 
-                # Filter out busy pets from the available pets list, keeping the busy pet system intact
-                available_pets = [pet for pet in pets if pet.get("pet_id") not in busy_pets]
-
+                # Coba assign pet sesuai kombinasi yang dibutuhkan
                 while True:
+                    # Filter pet yang masih memiliki slot penggunaan (amount)
+                    available_pets = [
+                        pet for pet in pets
+                        if busy_pets.get(pet.get("pet_id"), 0) < pet.get("amount", 1)
+                    ]
                     pet_ids = []
 
+                    # Pilih pet untuk setiap slot sesuai requirement
                     for req in required_pets:
                         for pet in available_pets:
                             if (
@@ -635,6 +641,7 @@ class animix:
                                 and pet.get("pet_id") not in pet_ids
                             ):
                                 pet_ids.append(pet["pet_id"])
+                                # Hapus pet ini sementara agar tidak dipilih lagi di iterasi yang sama
                                 available_pets.remove(pet)
                                 break
 
@@ -650,8 +657,9 @@ class animix:
 
                         if enter_response.status_code == 200:
                             self.log(f"✅ Mission {mission_id} successfully started.", Fore.GREEN)
-                            # Mark these pets as busy so they won't be reused
-                            busy_pets.update(pet_ids)
+                            # Update busy_pets count untuk setiap pet yang digunakan
+                            for pet_id in pet_ids:
+                                busy_pets[pet_id] = busy_pets.get(pet_id, 0) + 1
                             break
                         else:
                             self.log(

@@ -24,13 +24,11 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 **Version v1.1.5**
+## 🌟 **Version v1.1.6**
 
 ### **Updates**
 
-1. **Optimization**: Improved the gacha system for enhanced performance and user experience.
-2. **Optimization**: Refined the mission system to boost efficiency and stability.
-3. **Optimization**: Upgraded the proxy system for smoother integration and better rotation support.
+1. **Optimization**: Refined the mission system to boost efficiency and stability.
 
 Stay tuned for more updates! ✨
 
