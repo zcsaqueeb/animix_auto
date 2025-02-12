@@ -3,6 +3,7 @@
   "achievements": true,
   "mix": true,
   "mission": true,
+  "mission_sync_star": true,
   "quest": true,
   "claim_pass": true,
   "pvp": true,

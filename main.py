@@ -637,7 +637,8 @@ class animix:
                         for pet in available_pets:
                             if (
                                 pet.get("class") == req["class"]
-                                and pet.get("star", 0) >= req["star"]
+                                and (pet.get("star", 0) == req["star"] if self.config.get("mission_sync_star", False)
+                                    else pet.get("star", 0) >= req["star"])
                                 and pet.get("pet_id") not in pet_ids
                             ):
                                 pet_ids.append(pet["pet_id"])
@@ -859,6 +860,54 @@ class animix:
         except requests.exceptions.RequestException as e:
             self.log(f"❌ An error occurred while processing season passes: {e}", Fore.RED)
 
+    def upgrade_pets(self, req_url_pets: str, req_url_upgrade_check: str, req_url_upgrade: str, headers: dict) -> None:
+        """
+        Mengecek dan meng-upgrade pet yang memenuhi syarat.
+        Fungsi ini akan terus melakukan pengecekan ulang selama terdapat pet yang diupgrade.
+        """
+        upgraded_any = True
+        while upgraded_any:
+            upgraded_any = False
+            self.log("⚙️ Checking for pets eligible for upgrade...", Fore.CYAN)
+            response = requests.get(req_url_pets, headers=headers)
+            response.raise_for_status()
+            pets_data = response.json()
+            
+            if "result" in pets_data and isinstance(pets_data["result"], list):
+                pets = pets_data["result"]
+                for pet in pets:
+                    # Cek pet dengan star minimal 4 dan amount lebih dari 1
+                    if pet.get("star", 0) >= 4 and pet.get("amount", 0) > 1:
+                        pet_id = pet.get("pet_id")
+                        payload = {"pet_id": pet_id}
+                        # Cek kelengkapan upgrade untuk pet tersebut
+                        response = requests.get(f"{req_url_upgrade_check}?pet_id={pet_id}", headers=headers, json=payload)
+                        response.raise_for_status()
+                        upgrade_data = response.json()
+                        
+                        if "result" in upgrade_data and isinstance(upgrade_data["result"], dict):
+                            # Ambil data requirement dan material (diasumsikan dalam list dan ambil elemen pertama)
+                            required = upgrade_data["result"].get("required", [])[0]
+                            materials = upgrade_data["result"].get("materials", [])[0]
+                            
+                            if (required["available"] >= required["amount"] and
+                                materials["available"] >= materials["amount"]):
+                                
+                                self.log(f"🔧 Upgrading pet ID {pet_id}...", Fore.CYAN)
+                                response = requests.post(req_url_upgrade, headers=headers, json=payload)
+                                response.raise_for_status()
+                                upgrade_result = response.json()
+                                
+                                if ("result" in upgrade_result and 
+                                    upgrade_result["result"].get("status", False)):
+                                    new_level = upgrade_result["result"].get("level")
+                                    self.log(f"✅ Pet ID {pet_id} upgraded to Level {new_level}", Fore.GREEN)
+                                    upgraded_any = True
+                                else:
+                                    self.log(f"🚫 Failed to upgrade pet ID {pet_id}", Fore.RED)
+            else:
+                self.log("🚫 No pets found for upgrade check.", Fore.RED)
+
     def pvp(self) -> None:
         """Handles fetching and displaying PvP user information."""
         req_url_info = f"{self.BASE_URL}battle/user/info"
@@ -869,6 +918,14 @@ class animix:
         req_url_upgrade_check = f"{self.BASE_URL}battle/pet/level-up/required"
         req_url_upgrade = f"{self.BASE_URL}battle/pet/level-up"
         headers = {**self.HEADERS, "tg-init-data": self.token}
+
+        # === Upgrade Pets di luar loop PvP ===
+        try:
+            self.upgrade_pets(req_url_pets, req_url_upgrade_check, req_url_upgrade, headers)
+        except requests.exceptions.RequestException as e:
+            self.log(f"❌ Upgrade process failed: {e}", Fore.RED)
+        except Exception as e:
+            self.log(f"❌ Unexpected error during upgrade: {e}", Fore.RED)
 
         try:
             while True:
@@ -911,7 +968,7 @@ class animix:
                     else:
                         self.log("🛡️ Defense Team: None", Fore.YELLOW)
 
-                    # Step 2: Fetch user's pet list
+                    # Step 2: Fetch user's pet list (tanpa upgrade, karena sudah dilakukan di luar loop)
                     self.log("🔍 Fetching user pet list...", Fore.CYAN)
                     response = requests.get(req_url_pets, headers=headers)
                     response.raise_for_status()
@@ -920,32 +977,6 @@ class animix:
                     best_pets = []
                     if "result" in pets_data and isinstance(pets_data["result"], list):
                         pets = pets_data["result"]
-
-                        # Step 2.1: Upgrade eligible pets (4-star and above with amount > 1)
-                        self.log("⚙️ Checking for pets eligible for upgrade...", Fore.CYAN)
-                        for pet in pets:
-                            if pet.get("star", 0) >= 4 and pet.get("amount", 0) > 1:
-                                pet_id = pet.get("pet_id")
-                                payload = {"pet_id": pet_id}
-                                response = requests.get(f"{req_url_upgrade_check}?pet_id={pet_id}", headers=headers, json=payload)
-                                response.raise_for_status()
-                                upgrade_data = response.json()
-
-                                if "result" in upgrade_data and isinstance(upgrade_data["result"], dict):
-                                    required = upgrade_data["result"].get("required", [])[0]
-                                    materials = upgrade_data["result"].get("materials", [])[0]
-
-                                    if required["available"] >= required["amount"] and materials["available"] >= materials["amount"]:
-                                        self.log(f"🔧 Upgrading pet ID {pet_id}...", Fore.CYAN)
-                                        response = requests.post(req_url_upgrade, headers=headers, json=payload)
-                                        response.raise_for_status()
-                                        upgrade_result = response.json()
-
-                                        if "result" in upgrade_result and upgrade_result["result"].get("status", False):
-                                            new_level = upgrade_result["result"].get("level")
-                                            self.log(f"✅ Pet ID {pet_id} upgraded to Level {new_level}", Fore.GREEN)
-                                        else:
-                                            self.log(f"🚫 Failed to upgrade pet ID {pet_id}", Fore.RED)
 
                         # Step 2.2: Determine the 3 best pets based on total attribute scores
                         best_pets = sorted(
@@ -991,9 +1022,10 @@ class animix:
                                 self.log("✅ Defense team successfully updated!", Fore.GREEN)
                             else:
                                 self.log("🚫 Failed to update defense team.", Fore.RED)
-
                         else:
                             self.log("🚫 No pets found in the list.", Fore.RED)
+                    else:
+                        self.log("🚫 Failed to fetch pet list properly.", Fore.RED)
 
                     # Step 3: If tickets are available, fetch opponent information
                     if tickets > 0:
@@ -1051,7 +1083,10 @@ class animix:
                                         round_result = "Win" if round_info.get("result", False) else "Lose"
                                         self.log(f"   Round {idx}: Attacker {attacker_id} vs Defender {defender_id} - {round_result}", Fore.GREEN)
 
-                                    self.log(f"🎉 Victory! Gained Score: {score_gained}", Fore.GREEN) if is_win else self.log("💔 Defeat!", Fore.RED)
+                                    if is_win:
+                                        self.log(f"🎉 Victory! Gained Score: {score_gained}", Fore.GREEN)
+                                    else:
+                                        self.log("💔 Defeat!", Fore.RED)
                                     self.log(f"🎟️ Tickets Remaining: {tickets}", Fore.GREEN)
 
                                     if tickets <= 0:
