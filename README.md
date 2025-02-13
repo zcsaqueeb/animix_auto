@@ -24,12 +24,13 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 **Version v1.1.7**
+## 🌟 **Version v1.2.0**
 
 ### **Updates**
 
-1. **Optimization**: Refined the mission system to boost efficiency and stability.
-2. **Optimisasi Sistem Upgrade Pet**: Upgrade pet kini lebih cepat dibandingkan versi sebelumnya.
+1. Overhauled the mission system following the latest update from Animix.
+2. Optimized the gacha system for improved efficiency.
+3. Removed `mission_sync_star`—star levels now automatically adjust to match mission requirements.
 
 Stay tuned for more updates! ✨
 
@@ -66,19 +67,18 @@ Start using Animix by registering through the following link:
 
 ## ⚙️ **Configuration in `config.json`**
 
-| **Function**           | **Description**                                                                                                                         | **Default** |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| `gacha`                | Automate gacha pulls                                                                                                                    | `True`      |
-| `achievements`         | Claim achievements automatically                                                                                                        | `True`      |
-| `mix`                  | Automate DNA mixing                                                                                                                     | `True`      |
-| `mission`              | Complete missions automatically                                                                                                         | `True`      |
-| `mission_sync_star`    | Adjust pet star selection for missions. When enabled, the bot will select only pets whose star exactly matches the mission requirement. | `True`      |
-| `quest`                | Automate quest completion                                                                                                               | `True`      |
-| `claim_pass`           | Claim pass rewards automatically                                                                                                        | `True`      |
-| `pvp`                  | Engage in PvP battles automatically                                                                                                     | `True`      |
-| `proxy`                | Enable/Disable proxy usage                                                                                                              | `False`     |
-| `delay_loop`           | Delay before the next loop (seconds)                                                                                                    | `3000`      |
-| `delay_account_switch` | Delay between account switches (seconds)                                                                                                | `10`        |
+| **Function**           | **Description**                          | **Default** |
+| ---------------------- | ---------------------------------------- | ----------- |
+| `gacha`                | Automate gacha pulls                     | `True`      |
+| `achievements`         | Claim achievements automatically         | `True`      |
+| `mix`                  | Automate DNA mixing                      | `True`      |
+| `mission`              | Complete missions automatically          | `True`      |
+| `quest`                | Automate quest completion                | `True`      |
+| `claim_pass`           | Claim pass rewards automatically         | `True`      |
+| `pvp`                  | Engage in PvP battles automatically      | `True`      |
+| `proxy`                | Enable/Disable proxy usage               | `False`     |
+| `delay_loop`           | Delay before the next loop (seconds)     | `3000`      |
+| `delay_account_switch` | Delay between account switches (seconds) | `10`        |
 
 ---
 

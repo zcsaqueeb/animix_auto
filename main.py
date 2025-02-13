@@ -162,56 +162,6 @@ class animix:
             self.log(f"❌ Unexpected error: {e}", Fore.RED)
 
     def gacha(self) -> None:
-        # Adding requests to the new API for bonus claims
-        for reward_no in [1, 2]:
-            bonus_url = f"{self.BASE_URL}pet/dna/gacha/bonus/claim"
-            headers = {**self.HEADERS, "Tg-Init-Data": self.token}
-            payload = {"reward_no": reward_no}
-
-            self.log(f"🎁 Claiming bonus reward {reward_no}...", Fore.CYAN)
-
-            try:
-                response = requests.post(bonus_url, headers=headers, json=payload)
-                if response is None or response.status_code != 200:
-                    self.log(
-                        f"⚠️ Response for bonus reward {reward_no} is None or invalid.",
-                        Fore.YELLOW,
-                    )
-                    continue
-
-                bonus_data = response.json() if response.text else {}
-                if not bonus_data:
-                    self.log(
-                        f"⚠️ Empty or invalid JSON response for bonus reward {reward_no}.",
-                        Fore.YELLOW,
-                    )
-                    continue
-
-                if bonus_data.get("error_code") is None:
-                    result = bonus_data.get("result", {})
-                    name = result.get("name", "Unknown")
-                    description = result.get("description", "No description")
-                    amount = result.get("amount", 0)
-
-                    self.log(f"✅ Successfully claimed bonus reward {reward_no}!", Fore.GREEN)
-                    self.log(f"📦 Name: {name}", Fore.LIGHTGREEN_EX)
-                    self.log(f"ℹ️ Description: {description}", Fore.YELLOW)
-                    self.log(f"🔢 Amount: {amount}", Fore.MAGENTA)
-                else:
-                    self.log(
-                        f"⚠️ Failed to claim bonus reward {reward_no}: {bonus_data.get('message', 'Unknown error')}",
-                        Fore.YELLOW,
-                    )
-            except requests.exceptions.RequestException as e:
-                self.log(f"❌ Failed to send claim request for bonus reward {reward_no}: {e}", Fore.RED)
-                continue
-            except ValueError as e:
-                self.log(f"❌ JSON error while claiming bonus reward {reward_no}: {e}", Fore.RED)
-                continue
-            except Exception as e:
-                self.log(f"❌ Unexpected error while claiming bonus reward {reward_no}: {e}", Fore.RED)
-                continue
-
         # Main gacha process
         while True:
             if self.token_reguler > 0:
@@ -344,6 +294,56 @@ class animix:
                     self.log(f"❌ Key error: {e}", Fore.RED)
                 except Exception as e:
                     self.log(f"❌ Unexpected error: {e}", Fore.RED)
+                    
+        # Adding requests to the new API for bonus claims
+        for reward_no in [1, 2]:
+            bonus_url = f"{self.BASE_URL}pet/dna/gacha/bonus/claim"
+            headers = {**self.HEADERS, "Tg-Init-Data": self.token}
+            payload = {"reward_no": reward_no}
+
+            self.log(f"🎁 Claiming bonus reward {reward_no}...", Fore.CYAN)
+
+            try:
+                response = requests.post(bonus_url, headers=headers, json=payload)
+                if response is None or response.status_code != 200:
+                    self.log(
+                        f"⚠️ Response for bonus reward {reward_no} is None or invalid.",
+                        Fore.YELLOW,
+                    )
+                    continue
+
+                bonus_data = response.json() if response.text else {}
+                if not bonus_data:
+                    self.log(
+                        f"⚠️ Empty or invalid JSON response for bonus reward {reward_no}.",
+                        Fore.YELLOW,
+                    )
+                    continue
+
+                if bonus_data.get("error_code") is None:
+                    result = bonus_data.get("result", {})
+                    name = result.get("name", "Unknown")
+                    description = result.get("description", "No description")
+                    amount = result.get("amount", 0)
+
+                    self.log(f"✅ Successfully claimed bonus reward {reward_no}!", Fore.GREEN)
+                    self.log(f"📦 Name: {name}", Fore.LIGHTGREEN_EX)
+                    self.log(f"ℹ️ Description: {description}", Fore.YELLOW)
+                    self.log(f"🔢 Amount: {amount}", Fore.MAGENTA)
+                else:
+                    self.log(
+                        f"⚠️ Failed to claim bonus reward {reward_no}: {bonus_data.get('message', 'Unknown error')}",
+                        Fore.YELLOW,
+                    )
+            except requests.exceptions.RequestException as e:
+                self.log(f"❌ Failed to send claim request for bonus reward {reward_no}: {e}", Fore.RED)
+                continue
+            except ValueError as e:
+                self.log(f"❌ JSON error while claiming bonus reward {reward_no}: {e}", Fore.RED)
+                continue
+            except Exception as e:
+                self.log(f"❌ Unexpected error while claiming bonus reward {reward_no}: {e}", Fore.RED)
+                continue
 
     def mix(self) -> None:
         """Combines DNA to create new pets based on star level and can_mom constraints."""
@@ -497,133 +497,105 @@ class animix:
             self.log(f"❌ Unexpected error: {e}", Fore.RED)
 
     def mission(self) -> None:
-        """Handles fetching, claiming, and deploying pets to missions."""
+        """List missions from API, claim finished missions, then assign pets
+        using mission.json definitions for missions that are not in progress."""
+        import time, json, requests
+
         headers = {**self.HEADERS, "Tg-Init-Data": self.token}
+        current_time = int(time.time())
 
         try:
-            # Step 1: Fetch the list of missions
+            # === STEP 1: Fetch mission list from API ===
             mission_url = f"{self.BASE_URL}mission/list"
-            self.log("🔄 Fetching the list of missions...", Fore.CYAN)
+            self.log("🔄 Fetching the current mission list...", Fore.CYAN)
             mission_response = requests.get(mission_url, headers=headers)
             mission_response.raise_for_status()
-
-            try:
-                mission_data = mission_response.json()
-            except ValueError:
-                self.log("❌ Mission response is not valid JSON.", Fore.RED)
-                return
-
+            mission_data = mission_response.json()
             missions = mission_data.get("result", [])
             if not isinstance(missions, list):
                 self.log("❌ Invalid mission data format (expected a list).", Fore.RED)
                 return
 
-            self.log("✅ Successfully fetched the list of missions.", Fore.GREEN)
+            # Siapkan set untuk mission ID yang masih in progress
+            in_progress_ids = set()
+            # Siapkan dictionary untuk pet yang sedang digunakan (busy)
+            busy_pets = {}
 
-            # Step 2: Fetch the list of pets
+            for mission in missions:
+                mission_id = mission.get("mission_id")
+                mission_end_time = mission.get("end_time")
+                if not mission_id or not mission_end_time:
+                    continue
+
+                if current_time < mission_end_time:
+                    in_progress_ids.add(mission_id)
+                    # Catat pet yang sudah tergabung pada misi ini (jika ada)
+                    pet_joined = mission.get("pet_joined", [])
+                    if isinstance(pet_joined, list):
+                        for pet_info in pet_joined:
+                            pet_id = pet_info.get("pet_id")
+                            if pet_id:
+                                busy_pets[pet_id] = busy_pets.get(pet_id, 0) + 1
+                    self.log(f"⚠️ Mission {mission_id} is still in progress.", Fore.YELLOW)
+                else:
+                    # Claim misi yang sudah selesai
+                    claim_url = f"{self.BASE_URL}mission/claim"
+                    claim_payload = {"mission_id": mission_id}
+                    claim_response = requests.post(claim_url, headers=headers, json=claim_payload)
+                    if claim_response.status_code == 200:
+                        self.log(f"✅ Mission {mission_id} successfully claimed.", Fore.GREEN)
+                    else:
+                        self.log(f"❌ Failed to claim mission {mission_id} (Error: {claim_response.status_code}).", Fore.RED)
+                        self.log(f"🔍 Claim response details: {claim_response.text}", Fore.RED)
+
+            # === STEP 2: Baca definisi misi dari file lokal mission.json ===
+            self.log("🔄 Reading mission definitions from mission.json...", Fore.CYAN)
+            try:
+                with open("mission.json", "r") as f:
+                    static_data = json.load(f)
+            except Exception as e:
+                self.log(f"❌ Failed to read mission.json: {e}", Fore.RED)
+                return
+
+            static_missions = static_data.get("result", [])
+            if not isinstance(static_missions, list):
+                self.log("❌ Invalid mission.json format (expected a list).", Fore.RED)
+                return
+
+            # Buat dictionary definisi misi berdasarkan mission_id (pastikan tipe data konsisten)
+            mission_defs = {str(m_def["mission_id"]): m_def for m_def in static_missions}
+
+            # === STEP 3: Fetch pet list from API untuk assignment ===
             pet_url = f"{self.BASE_URL}pet/list"
             self.log("🔄 Fetching the list of pets...", Fore.CYAN)
             pet_response = requests.get(pet_url, headers=headers)
             pet_response.raise_for_status()
-
-            try:
-                pet_data = pet_response.json()
-            except ValueError:
-                self.log("❌ Pet response is not valid JSON.", Fore.RED)
-                return
-
+            pet_data = pet_response.json()
             pets = pet_data.get("result", [])
             if not isinstance(pets, list):
                 self.log("❌ Invalid pet data format (expected a list).", Fore.RED)
                 return
-
             self.log("✅ Successfully fetched the list of pets.", Fore.GREEN)
 
-            # Step 3: Claim available missions
-            self.log("🔍 Claiming all available missions...", Fore.CYAN)
-            for mission in missions:
-                mission_id = mission.get("mission_id")
-                if not mission_id:
+            # === STEP 4: Assignment pet untuk misi yang TIDAK in progress ===
+            self.log("🔍 Filtering missions for pet assignment...", Fore.CYAN)
+            for mission_def in static_missions:
+                mission_id = str(mission_def.get("mission_id"))
+                # Lewati misi yang masih in progress (belum waktunya claim)
+                if mission_id in in_progress_ids:
+                    self.log(f"⚠️ Mission {mission_id} skipped (still in progress).", Fore.YELLOW)
                     continue
 
-                # Check if the mission can be claimed
-                if mission.get("can_completed"):
-                    claim_url = f"{self.BASE_URL}mission/claim"
-                    claim_payload = {"mission_id": mission_id}
-                    claim_response = requests.post(claim_url, headers=headers, json=claim_payload)
+                # Bangun daftar requirement pet dari mission.json
+                required_pets = []
+                for i in range(1, 4):
+                    pet_class = mission_def.get(f"pet_{i}_class")
+                    pet_star = mission_def.get(f"pet_{i}_star")
+                    if pet_class is not None and pet_star is not None:
+                        required_pets.append({"class": pet_class, "star": pet_star})
 
-                    if claim_response.status_code == 200:
-                        self.log(f"✅ Mission {mission_id} successfully claimed.", Fore.GREEN)
-                    else:
-                        self.log(
-                            f"❌ Failed to claim mission {mission_id} (Error: {claim_response.status_code}).",
-                            Fore.RED,
-                        )
-                        self.log(f"🔍 Claim response details: {claim_response.text}", Fore.RED)
-                else:
-                    self.log(f"⚠️ Mission {mission_id} cannot be claimed yet.", Fore.YELLOW)
-
-            # === REFRESH MISSION LIST AFTER CLAIMING ===
-            self.log("🔄 Refreshing mission list after claiming missions...", Fore.CYAN)
-            refreshed_response = requests.get(mission_url, headers=headers)
-            refreshed_response.raise_for_status()
-            try:
-                refreshed_data = refreshed_response.json()
-            except ValueError:
-                self.log("❌ Refreshed mission response is not valid JSON.", Fore.RED)
-                return
-
-            missions = refreshed_data.get("result", [])
-            if not isinstance(missions, list):
-                self.log("❌ Invalid refreshed mission data format (expected a list).", Fore.RED)
-                return
-
-            self.log("✅ Successfully refreshed the mission list.", Fore.GREEN)
-
-            # === RECORD BUSY PETS FROM MISSION 'pet_joined' DATA ===
-            # Gunakan dictionary untuk melacak berapa kali sebuah pet sedang digunakan
-            busy_pets = {}
-            for mission in missions:
-                mission_id = mission.get("mission_id")
-                pet_joined = mission.get("pet_joined")
-                if pet_joined and isinstance(pet_joined, list) and len(pet_joined) > 0:
-                    pet_ids_in_mission = []
-                    for pet_info in pet_joined:
-                        pet_id = pet_info.get("pet_id")
-                        if pet_id:
-                            busy_pets[pet_id] = busy_pets.get(pet_id, 0) + 1
-                            pet_ids_in_mission.append(pet_id)
-                    self.log(
-                        f"ℹ️ Mission {mission_id} already has assigned pets: {pet_ids_in_mission}.",
-                        Fore.MAGENTA,
-                    )
-
-            # Step 4: Assign pets to missions that are eligible for pet deployment
-            self.log("🔍 Filtering missions and assigning pets...", Fore.CYAN)
-            for mission in missions:
-                mission_id = mission.get("mission_id")
-                if not mission_id:
-                    continue
-
-                # Skip missions yang sudah punya pet atau masih bisa diklaim
-                if mission.get("pet_joined") and len(mission.get("pet_joined")) > 0:
-                    self.log(f"⚠️ Mission {mission_id} skipped (already has pets assigned).", Fore.YELLOW)
-                    continue
-
-                if mission.get("can_completed"):
-                    self.log(f"⚠️ Mission {mission_id} skipped (mission not ready for pet assignment).", Fore.YELLOW)
-                    continue
-
-                # Build required pet information for the mission
-                required_pets = [
-                    {
-                        "class": mission.get(f"pet_{i}_class"),
-                        "star": mission.get(f"pet_{i}_star"),
-                    }
-                    for i in range(1, 4)
-                ]
-
-                # Coba assign pet sesuai kombinasi yang dibutuhkan
+                # Lakukan assignment jika misi belum memiliki pet (diasumsikan setelah claim, pet_joined kosong)
+                # Jika ternyata pet sudah pernah diassign, kamu bisa menambahkan pengecekan tambahan di sini.
                 while True:
                     # Filter pet yang masih memiliki slot penggunaan (amount)
                     available_pets = [
@@ -631,44 +603,34 @@ class animix:
                         if busy_pets.get(pet.get("pet_id"), 0) < pet.get("amount", 1)
                     ]
                     pet_ids = []
-
-                    # Pilih pet untuk setiap slot sesuai requirement
+                    # Cari pet yang sesuai untuk tiap requirement (EXACT match)
                     for req in required_pets:
                         for pet in available_pets:
                             if (
                                 pet.get("class") == req["class"]
-                                and (pet.get("star", 0) == req["star"] if self.config.get("mission_sync_star", False)
-                                    else pet.get("star", 0) >= req["star"])
+                                and pet.get("star", 0) == req["star"]
                                 and pet.get("pet_id") not in pet_ids
                             ):
                                 pet_ids.append(pet["pet_id"])
-                                # Hapus pet ini sementara agar tidak dipilih lagi di iterasi yang sama
                                 available_pets.remove(pet)
                                 break
 
                     if len(pet_ids) == 3:
                         self.log(f"➡️ Assigning pets to mission {mission_id}...", Fore.CYAN)
-
                         enter_url = f"{self.BASE_URL}mission/enter"
-                        payload = {
-                            "mission_id": mission_id,
-                            **{f"pet_{i+1}_id": pet_id for i, pet_id in enumerate(pet_ids)},
-                        }
+                        payload = {"mission_id": mission_id}
+                        for i, pet_id in enumerate(pet_ids):
+                            payload[f"pet_{i+1}_id"] = pet_id
                         enter_response = requests.post(enter_url, headers=headers, json=payload)
-
                         if enter_response.status_code == 200:
                             self.log(f"✅ Mission {mission_id} successfully started.", Fore.GREEN)
-                            # Update busy_pets count untuk setiap pet yang digunakan
+                            # Update busy_pets untuk pet yang telah digunakan
                             for pet_id in pet_ids:
                                 busy_pets[pet_id] = busy_pets.get(pet_id, 0) + 1
                             break
                         else:
-                            self.log(
-                                f"❌ Failed to start mission {mission_id} (Error: {enter_response.status_code}).",
-                                Fore.RED,
-                            )
+                            self.log(f"❌ Failed to start mission {mission_id} (Error: {enter_response.status_code}).", Fore.RED)
                             self.log(f"🔍 Mission start response details: {enter_response.text}", Fore.RED)
-
                             if "PET_BUSY" in enter_response.text:
                                 self.log(f"🔄 Retrying with different pets for mission {mission_id}...", Fore.YELLOW)
                                 continue
