@@ -24,15 +24,13 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 **Version v1.2.0**
+## 🌟 **Version v1.2.1**
 
 ### **Updates**
 
-1. Overhauled the mission system following the latest update from Animix.
-2. Optimized the gacha system for improved efficiency.
-3. Removed `mission_sync_star`—star levels now automatically adjust to match mission requirements.
+1. Optimized the PvP system for a higher win rate.
 
-Stay tuned for more updates! ✨
+Stay tuned for more updates!
 
 ---
 

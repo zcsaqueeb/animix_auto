@@ -881,7 +881,7 @@ class animix:
         req_url_upgrade = f"{self.BASE_URL}battle/pet/level-up"
         headers = {**self.HEADERS, "tg-init-data": self.token}
 
-        # === Upgrade Pets di luar loop PvP ===
+        # === Upgrade Pets outside the PvP loop ===
         try:
             self.upgrade_pets(req_url_pets, req_url_upgrade_check, req_url_upgrade, headers)
         except requests.exceptions.RequestException as e:
@@ -900,7 +900,7 @@ class animix:
                 if "result" in data and isinstance(data["result"], dict):
                     result = data["result"]
 
-                    # Extracting important details
+                    # Extract important details
                     season_id = result.get("season_id", "N/A")
                     tier_name = result.get("tier_name", "N/A")
                     tier = result.get("tier", "N/A")
@@ -918,7 +918,7 @@ class animix:
                     self.log(f"🎟️ Tickets Available: {tickets}", Fore.GREEN)
 
                     if tickets <= 0:
-                        self.log("🎟️ No tickets remaining. PvP session ending.", Fore.YELLOW)
+                        self.log("🎟️ No tickets remaining. Ending PvP session.", Fore.YELLOW)
                         break
 
                     if defense_team:
@@ -930,7 +930,7 @@ class animix:
                     else:
                         self.log("🛡️ Defense Team: None", Fore.YELLOW)
 
-                    # Step 2: Fetch user's pet list (tanpa upgrade, karena sudah dilakukan di luar loop)
+                    # Step 2: Fetch user's pet list (no upgrade, as it was done outside the loop)
                     self.log("🔍 Fetching user pet list...", Fore.CYAN)
                     response = requests.get(req_url_pets, headers=headers)
                     response.raise_for_status()
@@ -961,7 +961,6 @@ class animix:
                                 damage = pet.get("damage", 0)
                                 speed = pet.get("speed", 0)
                                 armor = pet.get("armor", 0)
-
                                 self.log(
                                     f"   {idx}. {name} (ID: {pet_id}) - "
                                     f"HP: {hp}, Damage: {damage}, Speed: {speed}, Armor: {armor}",
@@ -975,7 +974,6 @@ class animix:
                                 "pet_id_2": best_pets[1].get("pet_id"),
                                 "pet_id_3": best_pets[2].get("pet_id")
                             }
-
                             response = requests.post(req_url_set_defense, headers=headers, json=payload)
                             response.raise_for_status()
                             defense_result = response.json()
@@ -1009,7 +1007,6 @@ class animix:
                             # Log opponent details
                             self.log(f"🎮 Opponent Found: {opponent_name} (@{opponent_username}) id: {opponent_id}", Fore.MAGENTA)
                             self.log(f"📊 Opponent Score: {opponent_score}", Fore.MAGENTA)
-
                             if opponent_pets:
                                 self.log("🐾 Opponent's Pets:", Fore.BLUE)
                                 for idx, pet in enumerate(opponent_pets, start=1):
@@ -1021,25 +1018,90 @@ class animix:
 
                             # Step 4: Execute attack if opponent and best pets are available
                             if opponent_id != "Unknown" and len(best_pets) == 3:
-                                self.log("⚔️ Executing attack...", Fore.CYAN)
+                                self.log("⚔️ Preparing to execute attack...", Fore.CYAN)
+
+                                # --- New Mechanic: Select our pet based on enemy pet statistics ---
+                                # Check if the opponent has exactly 3 pets for pairing
+                                if len(opponent_pets) == 3:
+                                    try:
+                                        with open("pets.json", "r") as f:
+                                            pets_json = json.load(f)
+                                        # Build a mapping of enemy pet details by pet_id from pets.json
+                                        enemy_pet_db = {pet["pet_id"]: pet for pet in pets_json.get("result", [])}
+
+                                        selected_pets = []
+                                        remaining_candidates = pets.copy()  # all user pets as candidates
+
+                                        # For each enemy pet, select one of our pets with a higher total attribute score
+                                        for enemy in opponent_pets:
+                                            enemy_pet_id = enemy.get("pet_id")
+                                            if enemy_pet_id in enemy_pet_db:
+                                                enemy_stats = enemy_pet_db[enemy_pet_id]
+                                                enemy_total = (
+                                                    enemy_stats.get("hp", 0) +
+                                                    enemy_stats.get("damage", 0) +
+                                                    enemy_stats.get("speed", 0) +
+                                                    enemy_stats.get("armor", 0)
+                                                )
+                                                # Find candidates with total stats greater than enemy_total
+                                                suitable_candidates = [
+                                                    pet for pet in remaining_candidates
+                                                    if (pet.get("hp", 0) + pet.get("damage", 0) +
+                                                        pet.get("speed", 0) + pet.get("armor", 0)) > enemy_total
+                                                ]
+                                                if suitable_candidates:
+                                                    # Select the candidate with the minimal excess
+                                                    chosen = min(
+                                                        suitable_candidates,
+                                                        key=lambda pet: (
+                                                            pet.get("hp", 0) +
+                                                            pet.get("damage", 0) +
+                                                            pet.get("speed", 0) +
+                                                            pet.get("armor", 0)
+                                                        ) - enemy_total
+                                                    )
+                                                    selected_pets.append(chosen)
+                                                    # Remove the chosen pet so it is not used twice
+                                                    remaining_candidates.remove(chosen)
+                                                else:
+                                                    self.log(f"🚫 No pet found that can outperform enemy pet ID {enemy_pet_id}.", Fore.YELLOW)
+                                                    raise Exception("No suitable pet found")
+                                            else:
+                                                self.log(f"🚫 Enemy pet details for ID {enemy_pet_id} not found in pets.json.", Fore.YELLOW)
+                                                raise Exception("Incomplete enemy pet data")
+                                        
+                                        if len(selected_pets) == 3:
+                                            self.log("✅ Selected pets for attack based on superior statistics.", Fore.GREEN)
+                                            chosen_pets = selected_pets
+                                        else:
+                                            self.log("🚫 Insufficient number of selected pets. Using best pets as fallback.", Fore.YELLOW)
+                                            chosen_pets = best_pets
+                                    except Exception as e:
+                                        self.log(f"🚫 Failed to select pets based on statistics: {e}. Using best pets as fallback.", Fore.YELLOW)
+                                        chosen_pets = best_pets
+                                else:
+                                    self.log("🚫 Opponent pet count not matching expected count. Using best pets.", Fore.YELLOW)
+                                    chosen_pets = best_pets
+
+                                self.log("⚔️ Executing attack with selected pets...", Fore.CYAN)
                                 payload = {
                                     "opponent_id": opponent_id,
-                                    "pet_id_1": best_pets[0].get("pet_id"),
-                                    "pet_id_2": best_pets[1].get("pet_id"),
-                                    "pet_id_3": best_pets[2].get("pet_id")
+                                    "pet_id_1": chosen_pets[0].get("pet_id"),
+                                    "pet_id_2": chosen_pets[1].get("pet_id"),
+                                    "pet_id_3": chosen_pets[2].get("pet_id")
                                 }
                                 response = requests.post(req_url_attack, headers=headers, json=payload)
                                 response.raise_for_status()
                                 attack_result = response.json()
 
                                 if "result" in attack_result and isinstance(attack_result["result"], dict):
-                                    result = attack_result["result"]
-                                    is_win = result.get("is_win", False)
-                                    score_gained = result.get("score", 0)
-                                    tickets = result.get("ticket", {}).get("amount", 0)
+                                    result_data = attack_result["result"]
+                                    is_win = result_data.get("is_win", False)
+                                    score_gained = result_data.get("score", 0)
+                                    tickets = result_data.get("ticket", {}).get("amount", 0)
 
                                     self.log("🏅 Attack Results:", Fore.GREEN)
-                                    for idx, round_info in enumerate(result.get("rounds", []), start=1):
+                                    for idx, round_info in enumerate(result_data.get("rounds", []), start=1):
                                         attacker_id = round_info.get("attacker_pet_id", "Unknown")
                                         defender_id = round_info.get("defender_pet_id", "Unknown")
                                         round_result = "Win" if round_info.get("result", False) else "Lose"
@@ -1052,7 +1114,7 @@ class animix:
                                     self.log(f"🎟️ Tickets Remaining: {tickets}", Fore.GREEN)
 
                                     if tickets <= 0:
-                                        self.log("🎟️ No tickets remaining. PvP session ending.", Fore.YELLOW)
+                                        self.log("🎟️ No tickets remaining. Ending PvP session.", Fore.YELLOW)
                                         break
                                 else:
                                     self.log("🚫 Failed to process attack results.", Fore.RED)
@@ -1062,6 +1124,10 @@ class animix:
                 else:
                     self.log("🚫 Failed to retrieve PvP information. No result found.", Fore.RED)
 
+        except requests.exceptions.RequestException as e:
+            self.log(f"🚫 RequestException encountered: {e}", Fore.RED)
+        except Exception as e:
+            self.log(f"🚫 Unexpected error encountered: {e}", Fore.RED)
         except requests.exceptions.RequestException as e:
             self.log(f"❌ Request processing failed: {e}", Fore.RED)
         except ValueError as e:
