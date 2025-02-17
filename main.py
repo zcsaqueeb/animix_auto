@@ -168,7 +168,7 @@ class animix:
                 req_url = f"{self.BASE_URL}pet/dna/gacha"
                 headers = {**self.HEADERS, "Tg-Init-Data": self.token}
                 payload = {"amount": 1, "is_super": False}
-            elif self.token_super > 0:
+            elif self.token_super >= 200:
                 req_url = f"{self.BASE_URL}pet/dna/gacha"
                 headers = {**self.HEADERS, "Tg-Init-Data": self.token}
                 payload = {"amount": 1, "is_super": True}

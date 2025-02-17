@@ -24,11 +24,15 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 **Version v1.2.2**
+## 🌟 **Version v1.2.3**
 
 ### **Updates**
 
-1. Added auto claim reward session system for PvP.
+1. Optimized **Super Gacha**: Now, Super Gacha will only be performed when points reach **200** or more.
+
+### **Upcoming Updates**
+
+- Adding a bonus claim system for Super Gacha.
 
 Stay tuned for more updates!
 
