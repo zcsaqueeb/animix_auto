@@ -24,11 +24,11 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 **Version v1.2.1**
+## 🌟 **Version v1.2.2**
 
 ### **Updates**
 
-1. Optimized the PvP system for a higher win rate.
+1. Added auto claim reward session system for PvP.
 
 Stay tuned for more updates!
 

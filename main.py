@@ -917,6 +917,30 @@ class animix:
                     self.log(f"⚔️ Matches Played: {matches} | Wins: {win_matches}", Fore.GREEN)
                     self.log(f"🎟️ Tickets Available: {tickets}", Fore.GREEN)
 
+                    # Cek apakah ada info reward yang belum diklaim
+                    not_claimed_rewards_info = result.get("not_claimed_rewards_info")
+                    if not_claimed_rewards_info and isinstance(not_claimed_rewards_info, dict):
+                        # Ambil season_id dari data not_claimed_rewards_info
+                        unclaimed_season_id = not_claimed_rewards_info.get("season_id")
+                        if unclaimed_season_id is not None:
+                            self.log(f"🏁 Unclaimed rewards found for season: {unclaimed_season_id}. Claiming rewards...", Fore.CYAN)
+                            req_url_claim = f"{self.BASE_URL}battle/user/reward/claim"
+                            payload_claim = {"season_id": unclaimed_season_id}
+                            claim_response = requests.post(req_url_claim, headers=headers, json=payload_claim)
+                            claim_response.raise_for_status()
+                            claim_result = claim_response.json()
+
+                            if "result" in claim_result and isinstance(claim_result["result"], dict):
+                                self.log("✅ Rewards claimed successfully!", Fore.GREEN)
+                                rewards = claim_result["result"].get("rewards", [])
+                                self.log(f"🎁 Rewards: {rewards}", Fore.GREEN)
+                            else:
+                                self.log("🚫 Failed to claim rewards.", Fore.RED)
+                        else:
+                            self.log("🚫 No valid season_id found in unclaimed rewards info.", Fore.RED)
+                    else:
+                        self.log("ℹ️ No unclaimed rewards info available. Skipping reward claim.", Fore.YELLOW)
+
                     if tickets <= 0:
                         self.log("🎟️ No tickets remaining. Ending PvP session.", Fore.YELLOW)
                         break
