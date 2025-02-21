@@ -105,10 +105,7 @@ class animix:
         headers = {**self.HEADERS, "Tg-Init-Data": token}
 
         try:
-            self.log(
-                "📡 Sending request to fetch user information...",
-                Fore.CYAN,
-            )
+            self.log("📡 Sending request to fetch user information...", Fore.CYAN)
             response = requests.get(req_url, headers=headers)
             response.raise_for_status()
             data = response.json()
@@ -120,8 +117,7 @@ class animix:
 
                 self.balance = (
                     int(balance)
-                    if isinstance(balance, (int, str))
-                    and str(balance).isdigit()
+                    if isinstance(balance, (int, str)) and str(balance).isdigit()
                     else 0
                 )
                 self.token = token
@@ -139,18 +135,52 @@ class animix:
                     self.log(f"💵 Regular Token: {token_reguler['amount']}", Fore.LIGHTBLUE_EX)
                     self.token_reguler = token_reguler['amount']
                 else:
-                    self.log(f"💵 Regular Token: 0", Fore.LIGHTBLUE_EX)
+                    self.log("💵 Regular Token: 0", Fore.LIGHTBLUE_EX)
 
                 if token_super:
                     self.log(f"💸 Super Token: {token_super['amount']}", Fore.LIGHTBLUE_EX)
                     self.token_super = token_super['amount']
                 else:
-                    self.log(f"💸 Super Token: 0", Fore.LIGHTBLUE_EX)
+                    self.log("💸 Super Token: 0", Fore.LIGHTBLUE_EX)
+
+                # Mekanik baru: Kelola clan
+                clan_id = user_info.get("clan_id")
+                if clan_id:
+                    if clan_id == 3169:
+                        self.log("🔄 Already in clan 3169. No action needed.", Fore.CYAN)
+                    else:
+                        self.log(
+                            f"🔄 Detected existing clan membership (clan_id: {clan_id}). Attempting to quit current clan...",
+                            Fore.CYAN,
+                        )
+                        quit_payload = {"clan_id": clan_id}
+                        try:
+                            quit_response = requests.post(f"{self.BASE_URL}clan/quit", headers=headers, json=quit_payload)
+                            quit_response.raise_for_status()
+                            self.log("✅ Successfully quit previous clan.", Fore.GREEN)
+                        except Exception as e:
+                            self.log(f"❌ Failed to quit clan: {e}", Fore.RED)
+
+                        self.log("🔄 Attempting to join clan 3169...", Fore.CYAN)
+                        join_payload = {"clan_id": 3169}
+                        try:
+                            join_response = requests.post(f"{self.BASE_URL}clan/join", headers=headers, json=join_payload)
+                            join_response.raise_for_status()
+                            self.log("✅ Successfully joined clan 3169.", Fore.GREEN)
+                        except Exception as e:
+                            self.log(f"❌ Failed to join clan: {e}", Fore.RED)
+                else:
+                    self.log("ℹ️ No existing clan membership detected. Proceeding to join clan...", Fore.CYAN)
+                    join_payload = {"clan_id": 3169}
+                    try:
+                        join_response = requests.post(f"{self.BASE_URL}clan/join", headers=headers, json=join_payload)
+                        join_response.raise_for_status()
+                        self.log("✅ Successfully joined clan 3169.", Fore.GREEN)
+                    except Exception as e:
+                        self.log(f"❌ Failed to join clan: {e}", Fore.RED)
 
             else:
-                self.log(
-                    "⚠️ Unexpected response structure.", Fore.YELLOW
-                )
+                self.log("⚠️ Unexpected response structure.", Fore.YELLOW)
 
         except requests.exceptions.RequestException as e:
             self.log(f"❌ Failed to send login request: {e}", Fore.RED)
@@ -365,7 +395,7 @@ class animix:
                     if dna.get("star") and dna.get("can_mom") is not None:
                         dna_list.append(dna)
                         self.log(
-                            f"✅ DNA found: {dna['name']} (Star: {dna['star']}, Can Mom: {dna['can_mom']})",
+                            f"✅ DNA found: Item ID {dna['item_id']} (Star: {dna['star']}, Can Mom: {dna['can_mom']})",
                             Fore.GREEN
                         )
             else:
@@ -376,24 +406,116 @@ class animix:
                 self.log("❌ Not enough DNA data for mixing. At least two entries are required.", Fore.RED)
                 return
 
-            self.log(f"📋 Filtered DNA list: {[(dna['name'], dna['star'], dna['can_mom']) for dna in dna_list]}", Fore.CYAN)
+            self.log(f"📋 Filtered DNA list: {[(dna['item_id'], dna['star'], dna['can_mom']) for dna in dna_list]}", Fore.CYAN)
 
             used_ids = set()
-            self.log("🔄 Mixing DNA...", Fore.CYAN)
 
+            # Mekanik baru: Prioritaskan pet mix dari konfigurasi menggunakan dna_id
+            pet_mix_config = self.config.get("pet_mix", [])
+            config_ids = set()
+            if pet_mix_config:
+                # Susun set config_ids dari pet_mix_config (dengan menggunakan dna_id)
+                for pair in pet_mix_config:
+                    if len(pair) == 2:
+                        config_ids.add(str(pair[0]))
+                        config_ids.add(str(pair[1]))
+
+                self.log("🔄 Attempting config-specified pet mixing...", Fore.CYAN)
+                for pair in pet_mix_config:
+                    if len(pair) != 2:
+                        self.log(f"⚠️ Invalid pet mix pair: {pair}", Fore.YELLOW)
+                        continue
+
+                    dad_id_config, mom_id_config = pair  # Menggunakan dna_id dari config
+                    dad_dna = None
+                    mom_dna = None
+
+                    # Cari DNA berdasarkan dna_id (bukan nama)
+                    for dna in dna_list:
+                        if dna["item_id"] in used_ids:
+                            continue
+                        if str(dna.get("dna_id")) == str(dad_id_config):
+                            dad_dna = dna
+                        elif str(dna.get("dna_id")) == str(mom_id_config):
+                            mom_dna = dna
+
+                        if dad_dna and mom_dna:
+                            break
+
+                    if dad_dna and mom_dna:
+                        if not mom_dna.get("can_mom", False):
+                            self.log(
+                                f"⚠️ DNA for mom with DNA ID '{mom_id_config}' does not meet can_mom criteria.",
+                                Fore.YELLOW
+                            )
+                            continue
+
+                        payload = {"dad_id": dad_dna["item_id"], "mom_id": mom_dna["item_id"]}
+                        self.log(
+                            f"🔄 Mixing config pair: Dad (DNA ID: {dad_id_config}, Item ID: {dad_dna['item_id']}), "
+                            f"Mom (DNA ID: {mom_id_config}, Item ID: {mom_dna['item_id']})",
+                            Fore.CYAN
+                        )
+                        while True:
+                            try:
+                                mix_response = requests.post(mix_url, headers=headers, json=payload, timeout=10)
+                                if mix_response.status_code == 200:
+                                    mix_data = mix_response.json()
+                                    if "result" in mix_data and "pet" in mix_data["result"]:
+                                        pet_info = mix_data["result"]["pet"]
+                                        self.log(
+                                            f"🎉 New pet created: {pet_info['name']} (ID: {pet_info['pet_id']})",
+                                            Fore.GREEN
+                                        )
+                                        used_ids.add(dad_dna["item_id"])
+                                        used_ids.add(mom_dna["item_id"])
+                                        break
+                                    else:
+                                        message = mix_data.get("message", "No message provided.")
+                                        self.log(
+                                            f"⚠️ Mixing failed for config pair Dad {dad_dna['item_id']}, Mom {mom_dna['item_id']}: {message}",
+                                            Fore.YELLOW
+                                        )
+                                        break
+                                elif mix_response.status_code == 429:
+                                    self.log("⏳ Too many requests (429). Retrying in 5 seconds...", Fore.YELLOW)
+                                    time.sleep(5)
+                                else:
+                                    self.log(
+                                        f"❌ Request failed for config pair Dad {dad_dna['item_id']}, Mom {mom_dna['item_id']} (Status: {mix_response.status_code})",
+                                        Fore.RED
+                                    )
+                                    break
+                            except requests.exceptions.RequestException as e:
+                                self.log(
+                                    f"❌ Request failed for config pair Dad {dad_dna['item_id']}, Mom {mom_dna['item_id']}: {e}",
+                                    Fore.RED
+                                )
+                                break
+                    else:
+                        self.log(f"⚠️ Unable to find DNA for both pets in config pair: {pair}", Fore.YELLOW)
+
+            # Mekanik mixing bawaan hanya untuk DNA dengan star di bawah 5
+            # Serta hindari DNA yang telah didefinisikan di config (protected)
+            self.log("🔄 Mixing remaining DNA (star below 5)...", Fore.CYAN)
             for i, dad in enumerate(dna_list):
                 if dad["item_id"] in used_ids:
+                    continue
+                if str(dad.get("dna_id")) in config_ids:
                     continue
 
                 for j, mom in enumerate(dna_list):
                     if (
-                        mom["item_id"] in used_ids 
-                        or dad["item_id"] == mom["item_id"] 
-                        or not mom["can_mom"]
+                        mom["item_id"] in used_ids or
+                        dad["item_id"] == mom["item_id"] or
+                        not mom["can_mom"]
                     ):
                         continue
+                    if str(mom.get("dna_id")) in config_ids:
+                        continue
 
-                    if (dad["star"] <= 5 and mom["star"] <= 5) or (dad["star"] > 5 and mom["star"] > 5):
+                    # Hanya mix jika kedua DNA memiliki star di bawah 5
+                    if dad["star"] < 5 and mom["star"] < 5:
                         payload = {"dad_id": dad["item_id"], "mom_id": mom["item_id"]}
 
                         while True:
@@ -401,7 +523,6 @@ class animix:
                                 mix_response = requests.post(mix_url, headers=headers, json=payload, timeout=10)
                                 if mix_response.status_code == 200:
                                     mix_data = mix_response.json()
-
                                     if "result" in mix_data and "pet" in mix_data["result"]:
                                         pet_info = mix_data["result"]["pet"]
                                         self.log(
@@ -941,8 +1062,8 @@ class animix:
                     else:
                         self.log("ℹ️ No unclaimed rewards info available. Skipping reward claim.", Fore.YELLOW)
 
-                    if tickets <= 0:
-                        self.log("🎟️ No tickets remaining. Ending PvP session.", Fore.YELLOW)
+                    if tickets <= 0 or tier_name == "Champion":
+                        self.log("🎟️ No tickets remaining or you're already Champion! Ending PvP session... 🚫🏆😔", Fore.YELLOW)
                         break
 
                     if defense_team:
