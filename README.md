@@ -24,15 +24,12 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 Version v1.2.4
+## 🌟 Version v1.2.5
 
 ### Updates
 
-1. **Auto Join Clan:** Added an auto join system for clans in the script.
-2. **Custom Mix System:** Introduced a custom mix system—you can now search for pet IDs in the provided `dna.json` file. Additionally, the bot will no longer mix pets with a star rating greater than 4.
-3. **PvP Optimization:** Optimized the PvP system. If your rank is Champion, the bot will not engage in PvP.
-
-Stay tuned for more updates!
+- **Mission System Optimization:**  
+  The bot now performs a two-stage pet assignment process for missions. In the first stage, it assigns pets that exactly match the mission requirements. For any missions that fail to start due to unavailable exact matches, the second stage kicks in—assigning available pets with a star rating higher than the mission’s requirement. This dual-phase approach maximizes mission completion and ensures efficient pet utilization.
 
 ---
 
