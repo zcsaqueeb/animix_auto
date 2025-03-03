@@ -47,12 +47,13 @@ class animix:
         self.log("📢 Channel: t.me/livexordsscript\n", Fore.CYAN)
 
     def log(self, message, color=Fore.RESET):
+        safe_message = message.encode('utf-8', 'backslashreplace').decode('utf-8')
         print(
             Fore.LIGHTBLACK_EX
             + datetime.now().strftime("[%Y:%m:%d ~ %H:%M:%S] |")
             + " "
             + color
-            + message
+            + safe_message
             + Fore.RESET
         )
 
