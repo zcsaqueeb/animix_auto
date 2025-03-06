@@ -16,5 +16,9 @@
     [118, 116],
     [119, 115],
     [120, 113]
-  ]
+  ],
+  "defens_type": "armor",
+  "defens_id": [],
+  "attack_type": "damage",
+  "attack_id": []
 }

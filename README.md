@@ -24,12 +24,27 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 Version v1.2.6
+## 🌟 Version v1.2.7
 
 ### Updates
 
-- **Fixed Enemy Name Bug:**  
-  The issue with enemy names displaying incorrectly has been resolved.
+- **Separated Defense Setup:**  
+  The defense team setup is now separated from the PvP loop.
+
+- **New Configuration Variables for Defense:**  
+  The config.json now includes two new variables: `defens_type` and `defens_id`.
+
+  - `defens_type` accepts values such as `armor`, `hp`, `speed`, or `damage` for selecting defense pets based on attributes.
+  - `defens_id` can be used to set a specific defense team by pet IDs (requires exactly 3 IDs; leave `defens_type` empty to use `defens_id`).
+
+- **New Configuration Variables for PvP Attack:**  
+  The config.json now also includes `attack_type` and `attack_id`, which work similarly to the defense variables but apply to the PvP attack system.
+
+  - `attack_type` accepts values such as `armor`, `hp`, `speed`, or `damage`.
+  - `attack_id` can be used to set a specific attack team by pet IDs (requires exactly 3 IDs; leave `attack_type` empty to use `attack_id`).
+
+- **Mission System Prioritization:**  
+  The mission system now prioritizes missions with higher total rewards.
 
 ---
 
@@ -52,19 +67,23 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ## ⚙️ **Configuration in `config.json`**
 
-| **Function**           | **Description**                          | **Default**                                                                  |
-| ---------------------- | ---------------------------------------- | ---------------------------------------------------------------------------- |
-| `gacha`                | Automate gacha pulls                     | `True`                                                                       |
-| `achievements`         | Claim achievements automatically         | `True`                                                                       |
-| `mix`                  | Automate DNA mixing                      | `True`                                                                       |
-| `mission`              | Complete missions automatically          | `True`                                                                       |
-| `quest`                | Automate quest completion                | `True`                                                                       |
-| `claim_pass`           | Claim pass rewards automatically         | `True`                                                                       |
-| `pvp`                  | Engage in PvP battles automatically      | `True`                                                                       |
-| `pet_mix`              | Custom pet mix configuration             | `[ [125, 121], [122, 125], [124, 125], [118, 116], [119, 115], [120, 113] ]` |
-| `proxy`                | Enable/Disable proxy usage               | `False`                                                                      |
-| `delay_loop`           | Delay before the next loop (seconds)     | `3000`                                                                       |
-| `delay_account_switch` | Delay between account switches (seconds) | `10`                                                                         |
+| **Function**           | **Description**                                               | **Default**                                                                  |
+| ---------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `gacha`                | Automate gacha pulls                                          | `true`                                                                       |
+| `achievements`         | Claim achievements automatically                              | `true`                                                                       |
+| `mix`                  | Automate DNA mixing                                           | `true`                                                                       |
+| `mission`              | Complete missions automatically                               | `true`                                                                       |
+| `quest`                | Automate quest completion                                     | `true`                                                                       |
+| `claim_pass`           | Claim pass rewards automatically                              | `true`                                                                       |
+| `pvp`                  | Engage in PvP battles automatically                           | `true`                                                                       |
+| `proxy`                | Enable/Disable proxy usage                                    | `false`                                                                      |
+| `delay_loop`           | Delay before the next loop (seconds)                          | `3`                                                                          |
+| `delay_account_switch` | Delay between account switches (seconds)                      | `10`                                                                         |
+| `pet_mix`              | Custom pet mix configuration                                  | `[ [125, 121], [122, 125], [124, 125], [118, 116], [119, 115], [120, 113] ]` |
+| `defens_type`          | Attribute for defense selection (armor, hp, speed, damage)    | `"armor"` (set to empty list to use `defens_id`)                             |
+| `defens_id`            | Specific pet IDs for defense                                  | `[]`                                                                         |
+| `attack_type`          | Attribute for PvP attack selection (armor, hp, speed, damage) | `"damage"` (set to empty list to use `attack_id`)                            |
+| `attack_id`            | Specific pet IDs for PvP attack                               | `[]`                                                                         |
 
 ---
 
