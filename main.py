@@ -436,9 +436,12 @@ class animix:
                 continue
 
     def mix(self) -> None:
-        """Combines DNA to create new pets without differentiating between dad and mom.
-        Now, it sends all IDs without checking for duplicates,
-        except that DNA IDs specified in config.json are excluded from random mixing."""
+        """Menggabungkan DNA untuk membuat pet baru tanpa membedakan antara dad dan mom.
+        Untuk config-specified mixing, sebelum eksekusi, sistem akan menghitung duplicate count
+        tiap ID di konfigurasi dan membandingkannya dengan total available 'amount' untuk DNA tersebut.
+        Jika available amount tidak mencukupi, pasangan mixing yang memerlukan ID tersebut tidak akan dieksekusi.
+        Jika mencukupi (atau lebih), maka semua pasangan dieksekusi tanpa pengurangan nilai amount.
+        Random mixing tetap menggunakan metode lama (mengabaikan DNA yang ID-nya sudah ditetapkan di config)."""
         req_url = f"{self.BASE_URL}pet/dna/list"
         mix_url = f"{self.BASE_URL}pet/mix"
         headers = {**self.HEADERS, "Tg-Init-Data": self.token}
@@ -453,62 +456,86 @@ class animix:
             dna_list = []
             if "result" in data and isinstance(data["result"], list):
                 for dna in data["result"]:
-                    # Take DNA if it has a 'star' field.
                     if dna.get("star") is not None:
-                        dna_list.append(dna)
                         self.log(
-                            f"✅ DNA found: Item ID {dna['item_id']} (Star: {dna['star']}, Can Mom: {dna.get('can_mom', 'N/A')})",
+                            f"✅ DNA found: Item ID {dna['item_id']} (Amount: {dna.get('amount', 0)}, Star: {dna['star']}, Can Mom: {dna.get('can_mom', 'N/A')})",
                             Fore.GREEN,
                         )
+                        dna_list.append(dna)
             else:
                 self.log("⚠️ No DNA found in the response.", Fore.YELLOW)
                 return
 
             if len(dna_list) < 2:
-                self.log(
-                    "❌ Not enough DNA data for mixing. At least two entries are required.",
-                    Fore.RED,
-                )
+                self.log("❌ Not enough DNA data for mixing. At least two entries are required.", Fore.RED)
                 return
 
             self.log(
-                f"📋 Filtered DNA list: {[(dna['item_id'], dna['star'], dna.get('can_mom', 'N/A')) for dna in dna_list]}",
+                f"📋 Filtered DNA list: {[(dna['item_id'], dna.get('amount', 0), dna['star'], dna.get('can_mom', 'N/A')) for dna in dna_list]}",
                 Fore.CYAN,
             )
 
-            # used_ids check removed
-
-            # Process config-specified pet mixing (using item_id)
+            # -------------------------------
+            # Config-specified mixing
+            # -------------------------------
             pet_mix_config = self.config.get("pet_mix", [])
             config_ids = set()
             if pet_mix_config:
-                # Build set of IDs from configuration so that these are excluded from random mixing later
+                # Kumpulkan semua ID dari config agar dikecualikan dari random mixing.
                 for pair in pet_mix_config:
                     if len(pair) == 2:
                         config_ids.add(str(pair[0]))
                         config_ids.add(str(pair[1]))
 
                 self.log("🔄 Attempting config-specified pet mixing...", Fore.CYAN)
+
+                # Buat mapping dari item_id ke total available amount (jika ada duplikat, jumlahkan)
+                available_config_dna = {}
+                for dna in dna_list:
+                    key = str(dna["item_id"])
+                    if key in available_config_dna:
+                        available_config_dna[key]["amount"] += dna.get("amount", 0)
+                    else:
+                        available_config_dna[key] = dict(dna)
+
+                # Hitung duplicate count tiap ID di konfigurasi
+                config_required_counts = {}
+                for pair in pet_mix_config:
+                    if len(pair) == 2:
+                        for id_val in pair:
+                            key = str(id_val)
+                            config_required_counts[key] = config_required_counts.get(key, 0) + 1
+
+                # Cek di awal apakah available amount sudah mencukupi untuk setiap ID di config
+                insufficient_ids = set()
+                for key, required in config_required_counts.items():
+                    available = available_config_dna.get(key, {}).get("amount", 0)
+                    if available < required:
+                        insufficient_ids.add(key)
+                        self.log(
+                            f"⚠️ Insufficient quantity for DNA ID {key}: required {required}, available {available}",
+                            Fore.YELLOW,
+                        )
+
+                # Proses setiap pasangan konfigurasi hanya jika kedua ID memiliki jumlah yang cukup (dari pengecekan awal)
                 for pair in pet_mix_config:
                     if len(pair) != 2:
                         self.log(f"⚠️ Invalid pet mix pair: {pair}", Fore.YELLOW)
                         continue
 
                     id1_config, id2_config = pair
-                    dna1 = None
-                    dna2 = None
+                    key1 = str(id1_config)
+                    key2 = str(id2_config)
 
-                    # Find both DNA based on item_id (ignoring roles)
-                    for dna in dna_list:
-                        if str(dna["item_id"]) == str(id1_config) and dna1 is None:
-                            dna1 = dna
-                        elif str(dna["item_id"]) == str(id2_config) and dna2 is None:
-                            dna2 = dna
+                    # Jika salah satu ID tidak mencukupi, lewati pasangan ini
+                    if key1 in insufficient_ids or key2 in insufficient_ids:
+                        self.log(f"⚠️ Skipping config pair {pair} due to insufficient quantity.", Fore.YELLOW)
+                        continue
 
-                        if dna1 and dna2:
-                            break
+                    dna1 = available_config_dna.get(key1)
+                    dna2 = available_config_dna.get(key2)
 
-                    if dna1 and dna2:
+                    if dna1 is not None and dna2 is not None:
                         payload = {"dad_id": dna1["item_id"], "mom_id": dna2["item_id"]}
                         self.log(
                             f"🔄 Mixing config pair: DNA1 (ID: {id1_config}, Item ID: {dna1['item_id']}), "
@@ -517,9 +544,7 @@ class animix:
                         )
                         while True:
                             try:
-                                mix_response = requests.post(
-                                    mix_url, headers=headers, json=payload, timeout=10
-                                )
+                                mix_response = requests.post(mix_url, headers=headers, json=payload, timeout=10)
                                 if mix_response.status_code == 200:
                                     mix_data = mix_response.json()
                                     if "result" in mix_data and "pet" in mix_data["result"]:
@@ -531,43 +556,34 @@ class animix:
                                         break
                                     else:
                                         message = mix_data.get("message", "No message provided.")
-                                        self.log(
-                                            f"⚠️ Mixing failed for config pair DNA1 {dna1['item_id']}, DNA2 {dna2['item_id']}: {message}",
-                                            Fore.YELLOW,
-                                        )
+                                        self.log(f"⚠️ Mixing failed for config pair {pair}: {message}", Fore.YELLOW)
                                         break
                                 elif mix_response.status_code == 429:
-                                    self.log(
-                                        "⏳ Too many requests (429). Retrying in 5 seconds...",
-                                        Fore.YELLOW,
-                                    )
+                                    self.log("⏳ Too many requests (429). Retrying in 5 seconds...", Fore.YELLOW)
                                     time.sleep(5)
                                 else:
-                                    self.log(
-                                        f"❌ Request failed for config pair DNA1 {dna1['item_id']}, DNA2 {dna2['item_id']} (Status: {mix_response.status_code})",
-                                        Fore.RED,
-                                    )
+                                    self.log(f"❌ Request failed for config pair {pair} (Status: {mix_response.status_code})", Fore.RED)
                                     break
                             except requests.exceptions.RequestException as e:
-                                self.log(
-                                    f"❌ Request failed for config pair DNA1 {dna1['item_id']}, DNA2 {dna2['item_id']}: {e}",
-                                    Fore.RED,
-                                )
+                                self.log(f"❌ Request failed for config pair {pair}: {e}", Fore.RED)
                                 break
                     else:
-                        self.log(
-                            f"⚠️ Unable to find matching DNA for config pair: {pair}",
-                            Fore.YELLOW,
-                        )
+                        self.log(f"⚠️ Unable to find matching DNA for config pair: {pair}", Fore.YELLOW)
 
-            # Random mixing for remaining DNA with star below 5, excluding those specified in config.json
+            # -------------------------------
+            # Random mixing (metode lama)
+            # -------------------------------
             self.log("🔄 Mixing remaining DNA (star below 5)...", Fore.CYAN)
             n = len(dna_list)
             for i in range(n):
                 if str(dna_list[i]["item_id"]) in config_ids:
                     continue
+                if dna_list[i].get("amount", 0) <= 0:
+                    continue
                 for j in range(i + 1, n):
                     if str(dna_list[j]["item_id"]) in config_ids:
+                        continue
+                    if dna_list[j].get("amount", 0) <= 0:
                         continue
                     if dna_list[i]["star"] < 5 and dna_list[j]["star"] < 5:
                         payload = {"dad_id": dna_list[i]["item_id"], "mom_id": dna_list[j]["item_id"]}
@@ -577,9 +593,7 @@ class animix:
                         )
                         while True:
                             try:
-                                mix_response = requests.post(
-                                    mix_url, headers=headers, json=payload, timeout=10
-                                )
+                                mix_response = requests.post(mix_url, headers=headers, json=payload, timeout=10)
                                 if mix_response.status_code == 200:
                                     mix_data = mix_response.json()
                                     if "result" in mix_data and "pet" in mix_data["result"]:
@@ -591,28 +605,16 @@ class animix:
                                         break
                                     else:
                                         message = mix_data.get("message", "No message provided.")
-                                        self.log(
-                                            f"⚠️ Mixing failed for DNA pair ({dna_list[i]['item_id']}, {dna_list[j]['item_id']}): {message}",
-                                            Fore.YELLOW,
-                                        )
+                                        self.log(f"⚠️ Mixing failed for DNA pair ({dna_list[i]['item_id']}, {dna_list[j]['item_id']}): {message}", Fore.YELLOW)
                                         break
                                 elif mix_response.status_code == 429:
-                                    self.log(
-                                        "⏳ Too many requests (429). Retrying in 5 seconds...",
-                                        Fore.YELLOW,
-                                    )
+                                    self.log("⏳ Too many requests (429). Retrying in 5 seconds...", Fore.YELLOW)
                                     time.sleep(5)
                                 else:
-                                    self.log(
-                                        f"❌ Request failed for DNA pair ({dna_list[i]['item_id']}, {dna_list[j]['item_id']}) (Status: {mix_response.status_code})",
-                                        Fore.RED,
-                                    )
+                                    self.log(f"❌ Request failed for DNA pair ({dna_list[i]['item_id']}, {dna_list[j]['item_id']}) (Status: {mix_response.status_code})", Fore.RED)
                                     break
                             except requests.exceptions.RequestException as e:
-                                self.log(
-                                    f"❌ Request failed for DNA pair ({dna_list[i]['item_id']}, {dna_list[j]['item_id']}): {e}",
-                                    Fore.RED,
-                                )
+                                self.log(f"❌ Request failed for DNA pair ({dna_list[i]['item_id']}, {dna_list[j]['item_id']}): {e}", Fore.RED)
                                 break
 
         except requests.exceptions.RequestException as e:
