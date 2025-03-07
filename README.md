@@ -24,27 +24,12 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 Version v1.2.7
+## 🌟 Version v1.2.8
 
 ### Updates
 
-- **Separated Defense Setup:**  
-  The defense team setup is now separated from the PvP loop.
-
-- **New Configuration Variables for Defense:**  
-  The config.json now includes two new variables: `defens_type` and `defens_id`.
-
-  - `defens_type` accepts values such as `armor`, `hp`, `speed`, or `damage` for selecting defense pets based on attributes.
-  - `defens_id` can be used to set a specific defense team by pet IDs (requires exactly 3 IDs; leave `defens_type` empty to use `defens_id`).
-
-- **New Configuration Variables for PvP Attack:**  
-  The config.json now also includes `attack_type` and `attack_id`, which work similarly to the defense variables but apply to the PvP attack system.
-
-  - `attack_type` accepts values such as `armor`, `hp`, `speed`, or `damage`.
-  - `attack_id` can be used to set a specific attack team by pet IDs (requires exactly 3 IDs; leave `attack_type` empty to use `attack_id`).
-
-- **Mission System Prioritization:**  
-  The mission system now prioritizes missions with higher total rewards.
+- **Mix System Reversion:**  
+  The mix system has been reverted to its previous version. Although this change may result in slower performance, it ensures that logic errors are avoided. Now, the system mixes all IDs without distinguishing between DNA dad or DNA mom.
 
 ---
 

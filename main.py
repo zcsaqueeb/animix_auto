@@ -436,7 +436,7 @@ class animix:
                 continue
 
     def mix(self) -> None:
-        """Combines DNA to create new pets based on star level and can_mom constraints."""
+        """Combines DNA to create new pets without differentiating between dad and mom."""
         req_url = f"{self.BASE_URL}pet/dna/list"
         mix_url = f"{self.BASE_URL}pet/mix"
         headers = {**self.HEADERS, "Tg-Init-Data": self.token}
@@ -449,13 +449,13 @@ class animix:
             data = response.json()
 
             dna_list = []
-
             if "result" in data and isinstance(data["result"], list):
                 for dna in data["result"]:
-                    if dna.get("star") and dna.get("can_mom") is not None:
+                    # Ambil DNA jika memiliki field star
+                    if dna.get("star") is not None:
                         dna_list.append(dna)
                         self.log(
-                            f"✅ DNA found: Item ID {dna['item_id']} (Star: {dna['star']}, Can Mom: {dna['can_mom']})",
+                            f"✅ DNA found: Item ID {dna['item_id']} (Star: {dna['star']}, Can Mom: {dna.get('can_mom', 'N/A')})",
                             Fore.GREEN,
                         )
             else:
@@ -470,17 +470,17 @@ class animix:
                 return
 
             self.log(
-                f"📋 Filtered DNA list: {[(dna['item_id'], dna['star'], dna['can_mom']) for dna in dna_list]}",
+                f"📋 Filtered DNA list: {[(dna['item_id'], dna['star'], dna.get('can_mom', 'N/A')) for dna in dna_list]}",
                 Fore.CYAN,
             )
 
             used_ids = set()
 
-            # Mekanik baru: Prioritaskan pet mix dari konfigurasi menggunakan dna_id
+            # Prioritaskan pet mix dari konfigurasi jika ada (menggunakan item_id)
             pet_mix_config = self.config.get("pet_mix", [])
             config_ids = set()
             if pet_mix_config:
-                # Susun set config_ids dari pet_mix_config (dengan menggunakan dna_id)
+                # Buat set id dari konfigurasi agar DNA yang tercantum tidak tercampur lagi di mixing sisa
                 for pair in pet_mix_config:
                     if len(pair) == 2:
                         config_ids.add(str(pair[0]))
@@ -492,39 +492,27 @@ class animix:
                         self.log(f"⚠️ Invalid pet mix pair: {pair}", Fore.YELLOW)
                         continue
 
-                    dad_id_config, mom_id_config = (
-                        pair  # Menggunakan dna_id dari config
-                    )
-                    dad_dna = None
-                    mom_dna = None
+                    id1_config, id2_config = pair
+                    dna1 = None
+                    dna2 = None
 
-                    # Cari DNA berdasarkan dna_id (bukan nama)
+                    # Cari kedua DNA berdasarkan item_id (tanpa membedakan peran)
                     for dna in dna_list:
                         if dna["item_id"] in used_ids:
                             continue
-                        if str(dna.get("dna_id")) == str(dad_id_config):
-                            dad_dna = dna
-                        elif str(dna.get("dna_id")) == str(mom_id_config):
-                            mom_dna = dna
+                        if str(dna["item_id"]) == str(id1_config) and dna1 is None:
+                            dna1 = dna
+                        elif str(dna["item_id"]) == str(id2_config) and dna2 is None:
+                            dna2 = dna
 
-                        if dad_dna and mom_dna:
+                        if dna1 and dna2:
                             break
 
-                    if dad_dna and mom_dna:
-                        if not mom_dna.get("can_mom", False):
-                            self.log(
-                                f"⚠️ DNA for mom with DNA ID '{mom_id_config}' does not meet can_mom criteria.",
-                                Fore.YELLOW,
-                            )
-                            continue
-
-                        payload = {
-                            "dad_id": dad_dna["item_id"],
-                            "mom_id": mom_dna["item_id"],
-                        }
+                    if dna1 and dna2:
+                        payload = {"dad_id": dna1["item_id"], "mom_id": dna2["item_id"]}
                         self.log(
-                            f"🔄 Mixing config pair: Dad (DNA ID: {dad_id_config}, Item ID: {dad_dna['item_id']}), "
-                            f"Mom (DNA ID: {mom_id_config}, Item ID: {mom_dna['item_id']})",
+                            f"🔄 Mixing config pair: DNA1 (ID: {id1_config}, Item ID: {dna1['item_id']}), "
+                            f"DNA2 (ID: {id2_config}, Item ID: {dna2['item_id']})",
                             Fore.CYAN,
                         )
                         while True:
@@ -534,24 +522,19 @@ class animix:
                                 )
                                 if mix_response.status_code == 200:
                                     mix_data = mix_response.json()
-                                    if (
-                                        "result" in mix_data
-                                        and "pet" in mix_data["result"]
-                                    ):
+                                    if "result" in mix_data and "pet" in mix_data["result"]:
                                         pet_info = mix_data["result"]["pet"]
                                         self.log(
                                             f"🎉 New pet created: {pet_info['name']} (ID: {pet_info['pet_id']})",
                                             Fore.GREEN,
                                         )
-                                        used_ids.add(dad_dna["item_id"])
-                                        used_ids.add(mom_dna["item_id"])
+                                        used_ids.add(dna1["item_id"])
+                                        used_ids.add(dna2["item_id"])
                                         break
                                     else:
-                                        message = mix_data.get(
-                                            "message", "No message provided."
-                                        )
+                                        message = mix_data.get("message", "No message provided.")
                                         self.log(
-                                            f"⚠️ Mixing failed for config pair Dad {dad_dna['item_id']}, Mom {mom_dna['item_id']}: {message}",
+                                            f"⚠️ Mixing failed for config pair DNA1 {dna1['item_id']}, DNA2 {dna2['item_id']}: {message}",
                                             Fore.YELLOW,
                                         )
                                         break
@@ -563,45 +546,37 @@ class animix:
                                     time.sleep(5)
                                 else:
                                     self.log(
-                                        f"❌ Request failed for config pair Dad {dad_dna['item_id']}, Mom {mom_dna['item_id']} (Status: {mix_response.status_code})",
+                                        f"❌ Request failed for config pair DNA1 {dna1['item_id']}, DNA2 {dna2['item_id']} (Status: {mix_response.status_code})",
                                         Fore.RED,
                                     )
                                     break
                             except requests.exceptions.RequestException as e:
                                 self.log(
-                                    f"❌ Request failed for config pair Dad {dad_dna['item_id']}, Mom {mom_dna['item_id']}: {e}",
+                                    f"❌ Request failed for config pair DNA1 {dna1['item_id']}, DNA2 {dna2['item_id']}: {e}",
                                     Fore.RED,
                                 )
                                 break
                     else:
                         self.log(
-                            f"⚠️ Unable to find DNA for both pets in config pair: {pair}",
+                            f"⚠️ Unable to find matching DNA for config pair: {pair}",
                             Fore.YELLOW,
                         )
 
-            # Mekanik mixing bawaan hanya untuk DNA dengan star di bawah 5
-            # Serta hindari DNA yang telah didefinisikan di config (protected)
+            # Mekanik mixing bawaan untuk DNA dengan star di bawah 5
             self.log("🔄 Mixing remaining DNA (star below 5)...", Fore.CYAN)
-            for i, dad in enumerate(dna_list):
-                if dad["item_id"] in used_ids:
+            n = len(dna_list)
+            for i in range(n):
+                if dna_list[i]["item_id"] in used_ids or str(dna_list[i]["item_id"]) in config_ids:
                     continue
-                if str(dad.get("dna_id")) in config_ids:
-                    continue
-
-                for j, mom in enumerate(dna_list):
-                    if (
-                        mom["item_id"] in used_ids
-                        or dad["item_id"] == mom["item_id"]
-                        or not mom["can_mom"]
-                    ):
+                for j in range(i + 1, n):
+                    if dna_list[j]["item_id"] in used_ids or str(dna_list[j]["item_id"]) in config_ids:
                         continue
-                    if str(mom.get("dna_id")) in config_ids:
-                        continue
-
-                    # Hanya mix jika kedua DNA memiliki star di bawah 5
-                    if dad["star"] < 5 and mom["star"] < 5:
-                        payload = {"dad_id": dad["item_id"], "mom_id": mom["item_id"]}
-
+                    if dna_list[i]["star"] < 5 and dna_list[j]["star"] < 5:
+                        payload = {"dad_id": dna_list[i]["item_id"], "mom_id": dna_list[j]["item_id"]}
+                        self.log(
+                            f"🔄 Mixing DNA pair: Item IDs ({dna_list[i]['item_id']}, {dna_list[j]['item_id']})",
+                            Fore.CYAN,
+                        )
                         while True:
                             try:
                                 mix_response = requests.post(
@@ -609,24 +584,19 @@ class animix:
                                 )
                                 if mix_response.status_code == 200:
                                     mix_data = mix_response.json()
-                                    if (
-                                        "result" in mix_data
-                                        and "pet" in mix_data["result"]
-                                    ):
+                                    if "result" in mix_data and "pet" in mix_data["result"]:
                                         pet_info = mix_data["result"]["pet"]
                                         self.log(
                                             f"🎉 New pet created: {pet_info['name']} (ID: {pet_info['pet_id']})",
                                             Fore.GREEN,
                                         )
-                                        used_ids.add(dad["item_id"])
-                                        used_ids.add(mom["item_id"])
+                                        used_ids.add(dna_list[i]["item_id"])
+                                        used_ids.add(dna_list[j]["item_id"])
                                         break
                                     else:
-                                        message = mix_data.get(
-                                            "message", "No message provided."
-                                        )
+                                        message = mix_data.get("message", "No message provided.")
                                         self.log(
-                                            f"⚠️ Mixing failed for Dad {dad['item_id']}, Mom {mom['item_id']}: {message}",
+                                            f"⚠️ Mixing failed for DNA pair ({dna_list[i]['item_id']}, {dna_list[j]['item_id']}): {message}",
                                             Fore.YELLOW,
                                         )
                                         break
@@ -638,13 +608,13 @@ class animix:
                                     time.sleep(5)
                                 else:
                                     self.log(
-                                        f"❌ Request failed for Dad {dad['item_id']}, Mom {mom['item_id']} (Status: {mix_response.status_code})",
+                                        f"❌ Request failed for DNA pair ({dna_list[i]['item_id']}, {dna_list[j]['item_id']}) (Status: {mix_response.status_code})",
                                         Fore.RED,
                                     )
                                     break
                             except requests.exceptions.RequestException as e:
                                 self.log(
-                                    f"❌ Request failed for Dad {dad['item_id']}, Mom {mom['item_id']}: {e}",
+                                    f"❌ Request failed for DNA pair ({dna_list[i]['item_id']}, {dna_list[j]['item_id']}): {e}",
                                     Fore.RED,
                                 )
                                 break
