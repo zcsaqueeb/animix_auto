@@ -436,7 +436,9 @@ class animix:
                 continue
 
     def mix(self) -> None:
-        """Combines DNA to create new pets without differentiating between dad and mom."""
+        """Combines DNA to create new pets without differentiating between dad and mom.
+        Now, it sends all IDs without checking for duplicates,
+        except that DNA IDs specified in config.json are excluded from random mixing."""
         req_url = f"{self.BASE_URL}pet/dna/list"
         mix_url = f"{self.BASE_URL}pet/mix"
         headers = {**self.HEADERS, "Tg-Init-Data": self.token}
@@ -451,7 +453,7 @@ class animix:
             dna_list = []
             if "result" in data and isinstance(data["result"], list):
                 for dna in data["result"]:
-                    # Ambil DNA jika memiliki field star
+                    # Take DNA if it has a 'star' field.
                     if dna.get("star") is not None:
                         dna_list.append(dna)
                         self.log(
@@ -474,13 +476,13 @@ class animix:
                 Fore.CYAN,
             )
 
-            used_ids = set()
+            # used_ids check removed
 
-            # Prioritaskan pet mix dari konfigurasi jika ada (menggunakan item_id)
+            # Process config-specified pet mixing (using item_id)
             pet_mix_config = self.config.get("pet_mix", [])
             config_ids = set()
             if pet_mix_config:
-                # Buat set id dari konfigurasi agar DNA yang tercantum tidak tercampur lagi di mixing sisa
+                # Build set of IDs from configuration so that these are excluded from random mixing later
                 for pair in pet_mix_config:
                     if len(pair) == 2:
                         config_ids.add(str(pair[0]))
@@ -496,10 +498,8 @@ class animix:
                     dna1 = None
                     dna2 = None
 
-                    # Cari kedua DNA berdasarkan item_id (tanpa membedakan peran)
+                    # Find both DNA based on item_id (ignoring roles)
                     for dna in dna_list:
-                        if dna["item_id"] in used_ids:
-                            continue
                         if str(dna["item_id"]) == str(id1_config) and dna1 is None:
                             dna1 = dna
                         elif str(dna["item_id"]) == str(id2_config) and dna2 is None:
@@ -528,8 +528,6 @@ class animix:
                                             f"🎉 New pet created: {pet_info['name']} (ID: {pet_info['pet_id']})",
                                             Fore.GREEN,
                                         )
-                                        used_ids.add(dna1["item_id"])
-                                        used_ids.add(dna2["item_id"])
                                         break
                                     else:
                                         message = mix_data.get("message", "No message provided.")
@@ -562,14 +560,14 @@ class animix:
                             Fore.YELLOW,
                         )
 
-            # Mekanik mixing bawaan untuk DNA dengan star di bawah 5
+            # Random mixing for remaining DNA with star below 5, excluding those specified in config.json
             self.log("🔄 Mixing remaining DNA (star below 5)...", Fore.CYAN)
             n = len(dna_list)
             for i in range(n):
-                if dna_list[i]["item_id"] in used_ids or str(dna_list[i]["item_id"]) in config_ids:
+                if str(dna_list[i]["item_id"]) in config_ids:
                     continue
                 for j in range(i + 1, n):
-                    if dna_list[j]["item_id"] in used_ids or str(dna_list[j]["item_id"]) in config_ids:
+                    if str(dna_list[j]["item_id"]) in config_ids:
                         continue
                     if dna_list[i]["star"] < 5 and dna_list[j]["star"] < 5:
                         payload = {"dad_id": dna_list[i]["item_id"], "mom_id": dna_list[j]["item_id"]}
@@ -590,8 +588,6 @@ class animix:
                                             f"🎉 New pet created: {pet_info['name']} (ID: {pet_info['pet_id']})",
                                             Fore.GREEN,
                                         )
-                                        used_ids.add(dna_list[i]["item_id"])
-                                        used_ids.add(dna_list[j]["item_id"])
                                         break
                                     else:
                                         message = mix_data.get("message", "No message provided.")
