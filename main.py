@@ -220,220 +220,236 @@ class animix:
             self.log(f"❌ Unexpected error: {e}", Fore.RED)
 
     def gacha(self) -> None:
-        # Main gacha process
-        while True:
-            if self.token_reguler > 0:
-                req_url = f"{self.BASE_URL}pet/dna/gacha"
-                headers = {**self.HEADERS, "Tg-Init-Data": self.token}
-                payload = {"amount": 1, "is_super": False}
-            elif self.token_super >= 200:
-                req_url = f"{self.BASE_URL}pet/dna/gacha"
-                headers = {**self.HEADERS, "Tg-Init-Data": self.token}
-                payload = {"amount": 1, "is_super": True}
-            else:
-                self.log("🚫 No gacha points remaining. Unable to continue.", Fore.RED)
-                break
+        headers = {**self.HEADERS, "Tg-Init-Data": self.token}
 
-            self.log(
-                f"🎲 Starting {'super' if payload['is_super'] else 'regular'} gacha! Remaining gacha points: {self.token_super if payload['is_super'] else self.token_reguler}",
-                Fore.CYAN,
-            )
-
+        # =================== REGULAR GACHA PROCESS ===================
+        if self.token_reguler > 0:
+            req_url = f"{self.BASE_URL}pet/dna/gacha"
+            payload = {"amount": 1, "is_super": False}
+            self.log(f"🎲 Starting regular gacha! Regular Tokens: {self.token_reguler}", Fore.CYAN)
             try:
                 response = requests.post(req_url, headers=headers, json=payload)
                 if response is None or response.status_code != 200:
-                    self.log(
-                        "⚠️ Gacha response is None or invalid. Skipping this attempt.",
-                        Fore.YELLOW,
-                    )
-                    continue
-
-                data = response.json() if response.text else {}
-                if not data:
-                    self.log("⚠️ Empty or invalid JSON response for gacha.", Fore.YELLOW)
-                    continue
-
-                if "result" in data and "dna" in data["result"]:
-                    dna = data["result"]["dna"]
-
-                    if isinstance(dna, list):
-                        self.log(f"🎉 You received multiple DNA items!", Fore.GREEN)
-                        for dna_item in dna:
-                            name = dna_item.get("name", "Unknown")
-                            dna_class = dna_item.get("class", "Unknown")
-                            star = dna_item.get("star", "Unknown")
-                            remaining_points = str(data["result"].get("god_power", 0))
-
+                    self.log("⚠️ Received invalid response for regular gacha.", Fore.YELLOW)
+                else:
+                    data = response.json() if response.text else {}
+                    if "result" in data and "dna" in data["result"]:
+                        dna = data["result"]["dna"]
+                        if isinstance(dna, list):
+                            self.log("🎉 You received multiple DNA items (Regular)!", Fore.GREEN)
+                            for dna_item in dna:
+                                name = dna_item.get("name", "Unknown")
+                                dna_class = dna_item.get("class", "Unknown")
+                                star = dna_item.get("star", "Unknown")
+                                self.log(f"🧬 Name: {name}", Fore.LIGHTGREEN_EX)
+                                self.log(f"🏷️ Class: {dna_class}", Fore.YELLOW)
+                                self.log(f"⭐ Star: {star}", Fore.MAGENTA)
+                        else:
+                            name = dna.get("name", "Unknown") if dna else "Unknown"
+                            dna_class = dna.get("class", "Unknown") if dna else "Unknown"
+                            star = dna.get("star", "Unknown") if dna else "Unknown"
+                            self.log("🎉 You received a DNA item (Regular)!", Fore.GREEN)
                             self.log(f"🧬 Name: {name}", Fore.LIGHTGREEN_EX)
-                            self.log(f"🏷️  Class: {dna_class}", Fore.YELLOW)
+                            self.log(f"🏷️ Class: {dna_class}", Fore.YELLOW)
                             self.log(f"⭐ Star: {star}", Fore.MAGENTA)
-                            self.log(
-                                f"💎 Remaining Gacha Points: {remaining_points}",
-                                Fore.CYAN,
-                            )
-                            if payload["is_super"]:
-                                self.token_super = data["result"].get("god_power", 0)
-                            else:
-                                self.token_reguler = data["result"].get("god_power", 0)
+                        self.token_reguler = data["result"].get("god_power", self.token_reguler)
                     else:
-                        name = dna.get("name", "Unknown") if dna else "Unknown"
-                        dna_class = dna.get("class", "Unknown") if dna else "Unknown"
-                        star = dna.get("star", "Unknown") if dna else "Unknown"
-                        remaining_points = str(data["result"].get("god_power", 0))
-
-                        self.log(f"🎉 You received a new DNA item!", Fore.GREEN)
-                        self.log(f"🧬 Name: {name}", Fore.LIGHTGREEN_EX)
-                        self.log(f"🏷️  Class: {dna_class}", Fore.YELLOW)
-                        self.log(f"⭐ Star: {star}", Fore.MAGENTA)
-                        self.log(
-                            f"💎 Remaining Gacha Points: {remaining_points}", Fore.CYAN
-                        )
-                        if payload["is_super"]:
-                            self.token_super = data["result"].get("god_power", 0)
-                        else:
-                            self.token_reguler = data["result"].get("god_power", 0)
-
-                    self.gacha_point = (
-                        int(remaining_points)
-                        if isinstance(remaining_points, (int, str))
-                        and str(remaining_points).isdigit()
-                        else 0
-                    )
-                else:
-                    self.log(
-                        "⚠️ Gacha data does not match the expected structure.", Fore.RED
-                    )
-                    continue
-
-            except requests.exceptions.RequestException as e:
-                self.log(f"❌ Failed to send gacha request: {e}", Fore.RED)
-                continue
-            except ValueError as e:
-                self.log(f"❌ Data error (likely JSON): {e}", Fore.RED)
-                continue
-            except KeyError as e:
-                self.log(f"❌ Key error: {e}", Fore.RED)
-                continue
+                        self.log("⚠️ Regular gacha response structure is invalid.", Fore.RED)
             except Exception as e:
-                self.log(f"❌ Unexpected error: {e}", Fore.RED)
-                continue
+                self.log(f"❌ Error during regular gacha: {e}", Fore.RED)
+        else:
+            self.log("🚫 No regular tokens available for gacha.", Fore.RED)
 
-            time.sleep(1)
-            if self.token_reguler == 0 or self.token_super == 0:
-                self.log(
-                    "🔄 Refreshing gacha points after spinning gacha...", Fore.CYAN
-                )
-                req_url = f"{self.BASE_URL}user/info"
-                headers = {**self.HEADERS, "Tg-Init-Data": self.token}
-
-                try:
-                    response = requests.get(req_url, headers=headers)
-                    response.raise_for_status()
-                    data = response.json()
-
-                    if "result" in data:
-                        user_info = data["result"]
-                        username = user_info.get("telegram_username", "Unknown")
-                        balance = user_info.get("token", 0)
-
-                        inventory = user_info.get("inventory", [])
-                        token_reguler = next(
-                            (item for item in inventory if item["id"] == 1), None
-                        )
-                        token_super = next(
-                            (item for item in inventory if item["id"] == 3), None
-                        )
-
-                        if token_reguler:
-                            self.log(
-                                f"💵 Regular Token: {token_reguler['amount']}",
-                                Fore.LIGHTBLUE_EX,
-                            )
-                            self.token_reguler = token_reguler["amount"]
-                        else:
-                            self.log(f"💵 Regular Token: 0", Fore.LIGHTBLUE_EX)
-
-                        if token_super:
-                            self.log(
-                                f"💸 Super Token: {token_super['amount']}",
-                                Fore.LIGHTBLUE_EX,
-                            )
-                            self.token_super = token_super["amount"]
-                        else:
-                            self.log(f"💸 Super Token: 0", Fore.LIGHTBLUE_EX)
-
-                    else:
-                        self.log("⚠️ Unexpected response structure.", Fore.YELLOW)
-
-                except requests.exceptions.RequestException as e:
-                    self.log(f"❌ Failed to send Refresh request: {e}", Fore.RED)
-                except ValueError as e:
-                    self.log(f"❌ Data error (possible JSON issue): {e}", Fore.RED)
-                except KeyError as e:
-                    self.log(f"❌ Key error: {e}", Fore.RED)
-                except Exception as e:
-                    self.log(f"❌ Unexpected error: {e}", Fore.RED)
-
-        # Adding requests to the new API for bonus claims
-        for reward_no in [1, 2]:
-            bonus_url = f"{self.BASE_URL}pet/dna/gacha/bonus/claim"
-            headers = {**self.HEADERS, "Tg-Init-Data": self.token}
-            payload = {"reward_no": reward_no}
-
-            self.log(f"🎁 Claiming bonus reward {reward_no}...", Fore.CYAN)
-
+        # =================== SUPER GACHA PROCESS ===================
+        if self.token_super > 0:
+            bonus_check_url_super = f"{self.BASE_URL}pet/dna/gacha/bonus?is_super=True"
             try:
-                response = requests.post(bonus_url, headers=headers, json=payload)
-                if response is None or response.status_code != 200:
-                    self.log(
-                        f"⚠️ Response for bonus reward {reward_no} is None or invalid.",
-                        Fore.YELLOW,
-                    )
-                    continue
-
-                bonus_data = response.json() if response.text else {}
-                if not bonus_data:
-                    self.log(
-                        f"⚠️ Empty or invalid JSON response for bonus reward {reward_no}.",
-                        Fore.YELLOW,
-                    )
-                    continue
-
-                if bonus_data.get("error_code") is None:
-                    result = bonus_data.get("result", {})
-                    name = result.get("name", "Unknown")
-                    description = result.get("description", "No description")
-                    amount = result.get("amount", 0)
-
-                    self.log(
-                        f"✅ Successfully claimed bonus reward {reward_no}!", Fore.GREEN
-                    )
-                    self.log(f"📦 Name: {name}", Fore.LIGHTGREEN_EX)
-                    self.log(f"ℹ️ Description: {description}", Fore.YELLOW)
-                    self.log(f"🔢 Amount: {amount}", Fore.MAGENTA)
+                bonus_response = requests.get(bonus_check_url_super, headers=headers)
+                if bonus_response is None or bonus_response.status_code != 200:
+                    self.log("⚠️ Failed to retrieve super bonus data.", Fore.YELLOW)
                 else:
-                    self.log(
-                        f"⚠️ Failed to claim bonus reward {reward_no}: {bonus_data.get('message', 'Unknown error')}",
-                        Fore.YELLOW,
-                    )
-            except requests.exceptions.RequestException as e:
-                self.log(
-                    f"❌ Failed to send claim request for bonus reward {reward_no}: {e}",
-                    Fore.RED,
-                )
-                continue
-            except ValueError as e:
-                self.log(
-                    f"❌ JSON error while claiming bonus reward {reward_no}: {e}",
-                    Fore.RED,
-                )
-                continue
+                    bonus_data = bonus_response.json() if bonus_response.text else {}
+                    if bonus_data and "result" in bonus_data:
+                        bonus_result = bonus_data["result"]
+                        current_step = bonus_result.get("current_step", 0)
+                        total_step = bonus_result.get("total_step", 200)
+                        if current_step >= total_step:
+                            self.log("✅ Super bonus threshold reached. No super gacha needed.", Fore.CYAN)
+                        else:
+                            missing_spins = total_step - current_step
+                            spins_to_do = min(missing_spins, self.token_super)
+                            self.log(f"🎲 Initiating {spins_to_do} super gacha spin(s) (missing {missing_spins} spins for bonus)!", Fore.CYAN)
+                            for i in range(spins_to_do):
+                                req_url = f"{self.BASE_URL}pet/dna/gacha"
+                                payload = {"amount": 1, "is_super": True}
+                                try:
+                                    response = requests.post(req_url, headers=headers, json=payload)
+                                    if response is None or response.status_code != 200:
+                                        self.log("⚠️ Received invalid response for super gacha spin. Skipping spin.", Fore.YELLOW)
+                                        continue
+                                    data = response.json() if response.text else {}
+                                    if not data:
+                                        self.log("⚠️ Empty JSON response from super gacha spin.", Fore.YELLOW)
+                                        continue
+                                    if "result" in data and "dna" in data["result"]:
+                                        dna = data["result"]["dna"]
+                                        if isinstance(dna, list):
+                                            self.log("🎉 You received multiple DNA items (Super)!", Fore.GREEN)
+                                            for dna_item in dna:
+                                                name = dna_item.get("name", "Unknown")
+                                                dna_class = dna_item.get("class", "Unknown")
+                                                star = dna_item.get("star", "Unknown")
+                                                self.log(f"🧬 Name: {name}", Fore.LIGHTGREEN_EX)
+                                                self.log(f"🏷️ Class: {dna_class}", Fore.YELLOW)
+                                                self.log(f"⭐ Star: {star}", Fore.MAGENTA)
+                                        else:
+                                            name = dna.get("name", "Unknown") if dna else "Unknown"
+                                            dna_class = dna.get("class", "Unknown") if dna else "Unknown"
+                                            star = dna.get("star", "Unknown") if dna else "Unknown"
+                                            self.log("🎉 You received a DNA item (Super)!", Fore.GREEN)
+                                            self.log(f"🧬 Name: {name}", Fore.LIGHTGREEN_EX)
+                                            self.log(f"🏷️ Class: {dna_class}", Fore.YELLOW)
+                                            self.log(f"⭐ Star: {star}", Fore.MAGENTA)
+                                        self.token_super = data["result"].get("god_power", self.token_super)
+                                    else:
+                                        self.log("⚠️ Super gacha response structure is invalid.", Fore.RED)
+                                        continue
+                                except Exception as e:
+                                    self.log(f"❌ Error during super gacha spin: {e}", Fore.RED)
+                                    continue
+                    else:
+                        self.log("⚠️ Super bonus data is invalid.", Fore.YELLOW)
             except Exception as e:
-                self.log(
-                    f"❌ Unexpected error while claiming bonus reward {reward_no}: {e}",
-                    Fore.RED,
-                )
-                continue
+                self.log(f"❌ Failed during super bonus check: {e}", Fore.RED)
+        else:
+            self.log("🚫 No super tokens available for gacha.", Fore.RED)
+
+        # =================== BONUS CLAIM PROCESS ===================
+        # BONUS CLAIM: REGULAR GACHA BONUS
+        try:
+            bonus_check_url_reg = f"{self.BASE_URL}pet/dna/gacha/bonus?is_super=False"
+            bonus_response_reg = requests.get(bonus_check_url_reg, headers=headers)
+            if bonus_response_reg is None or bonus_response_reg.status_code != 200:
+                self.log("⚠️ Regular bonus check response is invalid.", Fore.YELLOW)
+            else:
+                bonus_data_reg = bonus_response_reg.json() if bonus_response_reg.text else {}
+                if bonus_data_reg and "result" in bonus_data_reg:
+                    bonus_result = bonus_data_reg["result"]
+                    current_step = bonus_result.get("current_step", 0)
+                    total_step = bonus_result.get("total_step", 200)
+                    if current_step >= total_step:
+                        rewards_to_claim = []
+                        if not bonus_result.get("is_claimed_god_power", False):
+                            rewards_to_claim.append(1)
+                        if not bonus_result.get("is_claimed_dna", False):
+                            rewards_to_claim.append(2)
+                        for reward_no in rewards_to_claim:
+                            claim_url = f"{self.BASE_URL}pet/dna/gacha/bonus/claim"
+                            claim_payload = {"reward_no": reward_no, "is_super": False}
+                            self.log(f"🎁 Claiming regular bonus reward {reward_no}...", Fore.CYAN)
+                            try:
+                                claim_response = requests.post(claim_url, headers=headers, json=claim_payload)
+                                if claim_response is None or claim_response.status_code != 200:
+                                    self.log(f"⚠️ Invalid response for regular bonus reward {reward_no}.", Fore.YELLOW)
+                                    continue
+                                claim_data = claim_response.json() if claim_response.text else {}
+                                if claim_data.get("error_code") is None:
+                                    result = claim_data.get("result", {})
+                                    name = result.get("name", "Unknown")
+                                    description = result.get("description", "No description")
+                                    amount = result.get("amount", 0)
+                                    self.log(f"✅ Successfully claimed regular bonus reward {reward_no}!", Fore.GREEN)
+                                    self.log(f"📦 Name: {name}", Fore.LIGHTGREEN_EX)
+                                    self.log(f"ℹ️ Description: {description}", Fore.YELLOW)
+                                    self.log(f"🔢 Amount: {amount}", Fore.MAGENTA)
+                                else:
+                                    self.log(f"⚠️ Failed to claim regular bonus reward {reward_no}: {claim_data.get('message', 'Unknown error')}", Fore.YELLOW)
+                            except Exception as e:
+                                self.log(f"❌ Error claiming regular bonus reward {reward_no}: {e}", Fore.RED)
+                                continue
+                    else:
+                        self.log("ℹ️ Regular bonus not ready to claim yet.", Fore.YELLOW)
+                else:
+                    self.log("⚠️ Regular bonus data is invalid.", Fore.YELLOW)
+        except Exception as e:
+            self.log(f"❌ Error during regular bonus claim check: {e}", Fore.RED)
+
+        # BONUS CLAIM: SUPER GACHA BONUS
+        try:
+            bonus_check_url_super = f"{self.BASE_URL}pet/dna/gacha/bonus?is_super=True"
+            bonus_response_super = requests.get(bonus_check_url_super, headers=headers)
+            if bonus_response_super is None or bonus_response_super.status_code != 200:
+                self.log("⚠️ Super bonus check response is invalid.", Fore.YELLOW)
+            else:
+                bonus_data_super = bonus_response_super.json() if bonus_response_super.text else {}
+                if bonus_data_super and "result" in bonus_data_super:
+                    bonus_result = bonus_data_super["result"]
+                    current_step = bonus_result.get("current_step", 0)
+                    total_step = bonus_result.get("total_step", 200)
+                    if current_step >= total_step:
+                        rewards_to_claim = []
+                        if not bonus_result.get("is_claimed_god_power", False):
+                            rewards_to_claim.append(1)
+                        if not bonus_result.get("is_claimed_dna", False):
+                            rewards_to_claim.append(2)
+                        for reward_no in rewards_to_claim:
+                            claim_url = f"{self.BASE_URL}pet/dna/gacha/bonus/claim"
+                            claim_payload = {"reward_no": reward_no, "is_super": True}
+                            self.log(f"🎁 Claiming super bonus reward {reward_no}...", Fore.CYAN)
+                            try:
+                                claim_response = requests.post(claim_url, headers=headers, json=claim_payload)
+                                if claim_response is None or claim_response.status_code != 200:
+                                    self.log(f"⚠️ Invalid response for super bonus reward {reward_no}.", Fore.YELLOW)
+                                    continue
+                                claim_data = claim_response.json() if claim_response.text else {}
+                                if claim_data.get("error_code") is None:
+                                    result = claim_data.get("result", {})
+                                    name = result.get("name", "Unknown")
+                                    description = result.get("description", "No description")
+                                    amount = result.get("amount", 0)
+                                    self.log(f"✅ Successfully claimed super bonus reward {reward_no}!", Fore.GREEN)
+                                    self.log(f"📦 Name: {name}", Fore.LIGHTGREEN_EX)
+                                    self.log(f"ℹ️ Description: {description}", Fore.YELLOW)
+                                    self.log(f"🔢 Amount: {amount}", Fore.MAGENTA)
+                                else:
+                                    self.log(f"⚠️ Failed to claim super bonus reward {reward_no}: {claim_data.get('message', 'Unknown error')}", Fore.YELLOW)
+                            except Exception as e:
+                                self.log(f"❌ Error claiming super bonus reward {reward_no}: {e}", Fore.RED)
+                                continue
+                    else:
+                        self.log("ℹ️ Super bonus not ready to claim yet.", Fore.YELLOW)
+                else:
+                    self.log("⚠️ Super bonus data is invalid.", Fore.YELLOW)
+        except Exception as e:
+            self.log(f"❌ Error during super bonus claim check: {e}", Fore.RED)
+
+        # =================== REFRESH TOKENS ===================
+        time.sleep(1)
+        self.log("🔄 Refreshing gacha tokens...", Fore.CYAN)
+        req_url = f"{self.BASE_URL}user/info"
+        try:
+            response = requests.get(req_url, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            if "result" in data:
+                user_info = data["result"]
+                inventory = user_info.get("inventory", [])
+                token_reguler = next((item for item in inventory if item["id"] == 1), None)
+                token_super = next((item for item in inventory if item["id"] == 3), None)
+                if token_reguler:
+                    self.log(f"💵 Regular Token: {token_reguler['amount']}", Fore.LIGHTBLUE_EX)
+                    self.token_reguler = token_reguler["amount"]
+                else:
+                    self.log("💵 Regular Token: 0", Fore.LIGHTBLUE_EX)
+                if token_super:
+                    self.log(f"💸 Super Token: {token_super['amount']}", Fore.LIGHTBLUE_EX)
+                    self.token_super = token_super["amount"]
+                else:
+                    self.log("💸 Super Token: 0", Fore.LIGHTBLUE_EX)
+            else:
+                self.log("⚠️ User info response structure is invalid.", Fore.YELLOW)
+        except Exception as e:
+            self.log(f"❌ Failed to refresh tokens: {e}", Fore.RED)
 
     def mix(self) -> None:
         """Menggabungkan DNA untuk membuat pet baru tanpa membedakan antara dad dan mom.
@@ -1259,8 +1275,8 @@ class animix:
                     else:
                         self.log("ℹ️ No unclaimed rewards info available. Skipping reward claim.", Fore.YELLOW)
 
-                    if tickets <= 0 or tier_name == "Champion":
-                        self.log("🎟️ No tickets remaining or you're already Champion! Ending PvP session... 🚫🏆😔", Fore.YELLOW)
+                    if tickets <= 0:
+                        self.log("🎟️ No tickets remaining! Ending PvP session... 🚫🏆😔", Fore.YELLOW)
                         break
 
                     if defense_team:

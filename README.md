@@ -24,12 +24,15 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 Version v1.2.8
+## 🌟 Version v1.2.9
 
 ### Updates
 
-- **Mix System Reversion:**  
-  The mix system has been reverted to its previous version. Although this change may result in slower performance, it ensures that logic errors are avoided. Now, the system mixes all IDs without distinguishing between DNA dad or DNA mom.
+- **Gacha System Optimization:**  
+  The gacha process has been optimized for improved efficiency and reliability. Various enhancements have been implemented to ensure smoother operation and better performance during gacha spins.
+
+- **Removal of Tier Champion Limitation:**  
+  The previous limitation for Tier Champion has been removed. Users can now freely access Tier Champion without any restrictions.
 
 ---
 
