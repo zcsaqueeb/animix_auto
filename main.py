@@ -12,17 +12,17 @@ class animix:
     HEADERS = {
         "accept": "*/*",
         "accept-encoding": "gzip, deflate, br, zstd",
-        "accept-language": "en-GB,en;q=0.9,en-US;q=0.8",
-        "origin": "https://tele-game.animix.tech",
+        "accept-language": "en-US,en;q=0.9",
+        "origin": "https://tele-game-v213.animix.tech",
         "priority": "u=1, i",
-        "referer": "https://tele-game.animix.tech/",
-        "sec-ch-ua": '"Microsoft Edge";v="131", "Chromium";v="131", "Not_A Brand";v="24", "Microsoft Edge WebView2";v="131"',
+        "referer": "https://tele-game-v213.animix.tech/",
+        "sec-ch-ua": '"Microsoft Edge";v="134", "Chromium";v="134", "Not:A-Brand";v="24", "Microsoft Edge WebView2";v="134"',
         "sec-ch-ua-mobile": "?0",
         "sec-ch-ua-platform": '"Windows"',
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
-        "sec-fetch-site": "cross-site",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+        "sec-fetch-site": "same-site",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0",
     }
 
     def __init__(self):
