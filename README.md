@@ -2,73 +2,115 @@
 
 <h1 align="center">Animix Bot</h1>
 
-<p align="center">Automate tasks in Animix to enhance your efficiency and maximize your results!</p>
+<p align="center">
+Boost your productivity with Animix Bot – your friendly automation tool that handles key tasks in Animix with ease!
+</p>
 
 ---
 
-## 🚀 **About the Bot**
+## 🚀 About the Bot
 
-The Animix Bot is designed to automate various tasks in **Animix**, including:
+Animix Bot is your automation buddy designed to simplify various tasks in **Animix**. No more tedious manual interactions—let the bot take over and maximize your results! This bot automates a wide range of features including:
 
-- **Automatic Gacha**
-- **Automatic Achievement Claims**
-- **Automatic DNA Mixing**
-- **Automatic Missions**
-- **Automatic Quests**
-- **Pass Reward Automation**
-- **PvP Automation**
-- **Multi-Account Support**
-- **Proxy Support**
+- **🎰 Auto Gacha:**  
+  Automatically perform gacha pulls to maximize your rewards.
 
-With this bot, you can save time and maximize your outcomes without manual interactions.
+- **🏆 Auto Achievements:**  
+  Claim achievements automatically to keep your bonus collection growing.
+
+- **🧬 Auto DNA Mixing:**  
+  Use a custom mix system (configured via a `dna.json` file) to automatically mix DNA while avoiding combinations with pets that have a star rating greater than 4.
+
+- **🗺️ Auto Missions & Quests:**  
+  Complete missions and quests automatically without manual intervention.
+
+- **🎫 Auto Claim Pass:**  
+  Claim pass rewards automatically for maximum benefit.
+
+- **⚔️ Auto PvP & Defense Setup:**  
+  Engage in PvP battles automatically and configure your defense team for better performance.
+
+- **⏫ Pet Upgrade System:**  
+  Automatically upgrade pets with 4 stars or higher to boost your gameplay.
+
+- **👥 Multi-Account Support:**  
+  Manage multiple accounts simultaneously with ease.
+
+- **🔌 Proxy Support:**  
+  Dynamically assign proxies for each account to support multi-account setups.
+
+- **🧵 Thread System:**  
+  (New!) Run multiple tasks concurrently to increase performance and speed up operations.
+
+- **⏱️ Delay Loop & Account Switching:**  
+  Set delays between loops and account switches to suit your workflow.
 
 ---
 
-## 🌟 Version v1.3.0
+## 🌟 Version Updates
 
-### Updates
+**Current Version: v1.3.0**
+
+### v1.3.0 - Latest Update
 
 - **Gacha System Optimization:**  
-  The gacha process has been optimized for improved efficiency and reliability. Various enhancements have been implemented to ensure smoother operation and better performance during gacha spins.
+  The gacha process has been optimized for improved efficiency and reliability.
+
+- **Thread System Addition:**  
+  New support for a thread system allows running multiple tasks concurrently to boost performance.
 
 ---
 
-### **Features in This Version:**
+## ⚙️ Configuration
 
-- **Auto Gacha:** Perform gacha automatically.
-- **Auto Achievements:** Automatically claim achievements.
-- **Custom Mix System:** Configure your pet mix using the provided `dna.json` file and avoid mixing pets with a star rating greater than 4.
-- **Auto Missions:** Complete missions automatically.
-- **Auto Quests:** Accomplish quests without manual intervention.
-- **Auto Claim Pass:** Automatically claim pass rewards.
-- **Auto PvP:** Engage in PvP battles and maximize rewards.
-- **Defense Setup for PvP:** Configure your defense team for better PvP performance.
-- **Pet Upgrade System:** Automatically upgrade pets with 4 stars or higher.
-- **Multi-Account Support:** Manage multiple accounts simultaneously.
-- **Proxy Support:** Assign different proxies for each account dynamically.
-- **Delay Loop and Account Switching:** Set intervals for looping and account transitions.
+### Main Bot Configuration (`config.json`)
 
----
+```json
+{
+  "gacha": true,
+  "achievements": true,
+  "mix": true,
+  "mission": true,
+  "quest": true,
+  "claim_pass": true,
+  "pvp": true,
+  "proxy": false,
+  "thread": 1,
+  "delay_loop": 3000,
+  "delay_account_switch": 10,
+  "pet_mix": [
+    [122, 125],
+    [125, 121],
+    [124, 125],
+    [118, 116],
+    [119, 115],
+    [120, 113]
+  ],
+  "defens_type": "armor",
+  "defens_id": [],
+  "attack_type": "damage",
+  "attack_id": []
+}
+```
 
-## ⚙️ **Configuration in `config.json`**
-
-| **Function**           | **Description**                                               | **Default**                                                                  |
-| ---------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `gacha`                | Automate gacha pulls                                          | `true`                                                                       |
-| `achievements`         | Claim achievements automatically                              | `true`                                                                       |
-| `mix`                  | Automate DNA mixing                                           | `true`                                                                       |
-| `mission`              | Complete missions automatically                               | `true`                                                                       |
-| `quest`                | Automate quest completion                                     | `true`                                                                       |
-| `claim_pass`           | Claim pass rewards automatically                              | `true`                                                                       |
-| `pvp`                  | Engage in PvP battles automatically                           | `true`                                                                       |
-| `proxy`                | Enable/Disable proxy usage                                    | `false`                                                                      |
-| `delay_loop`           | Delay before the next loop (seconds)                          | `3`                                                                          |
-| `delay_account_switch` | Delay between account switches (seconds)                      | `10`                                                                         |
-| `pet_mix`              | Custom pet mix configuration                                  | `[ [125, 121], [122, 125], [124, 125], [118, 116], [119, 115], [120, 113] ]` |
-| `defens_type`          | Attribute for defense selection (armor, hp, speed, damage)    | `"armor"` (set to empty list to use `defens_id`)                             |
-| `defens_id`            | Specific pet IDs for defense                                  | `[]`                                                                         |
-| `attack_type`          | Attribute for PvP attack selection (armor, hp, speed, damage) | `"damage"` (set to empty list to use `attack_id`)                            |
-| `attack_id`            | Specific pet IDs for PvP attack                               | `[]`                                                                         |
+| **Setting**            | **Description**                                                      | **Default Value** |
+| ---------------------- | -------------------------------------------------------------------- | ----------------- |
+| `gacha`                | Enable automatic gacha pulls.                                        | `true`            |
+| `achievements`         | Automatically claim achievements.                                    | `true`            |
+| `mix`                  | Automate DNA mixing.                                                 | `true`            |
+| `mission`              | Complete missions automatically.                                     | `true`            |
+| `quest`                | Execute quests without manual intervention.                          | `true`            |
+| `claim_pass`           | Automatically claim pass rewards.                                    | `true`            |
+| `pvp`                  | Enable automatic PvP battles.                                        | `true`            |
+| `proxy`                | Enable proxy usage for multi-account setups.                         | `false`           |
+| `thread`               | Number of threads to run tasks concurrently.                         | `1`               |
+| `delay_loop`           | Delay (in seconds) before the next loop begins.                      | `3000`            |
+| `delay_account_switch` | Delay (in seconds) between switching accounts.                       | `10`              |
+| `pet_mix`              | Custom configuration for pet mixing.                                 | See above         |
+| `defens_type`          | Attribute for defense selection (e.g., armor, hp, speed, damage).    | `"armor"`         |
+| `defens_id`            | Specific pet IDs for defense configuration.                          | `[]`              |
+| `attack_type`          | Attribute for PvP attack selection (e.g., armor, hp, speed, damage). | `"damage"`        |
+| `attack_id`            | Specific pet IDs for PvP attack configuration.                       | `[]`              |
 
 ---
 
@@ -84,60 +126,64 @@ Start using Animix by registering through the following link:
 
 ---
 
-## 📖 **Installation Steps**
+## 📥 Installation Steps
+
+### Main Bot Installation
 
 1. **Clone the Repository**  
-   Copy the project to your local machine:
+   Clone the repository to your local machine:
 
    ```bash
    git clone https://github.com/livexords-nw/Animix-bot.git
    ```
 
 2. **Navigate to the Project Folder**  
-   Move to the project directory:
+   Change to the project directory:
 
    ```bash
    cd Animix-bot
    ```
 
 3. **Install Dependencies**  
-   Install the required libraries:
+   Install all required libraries:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Configure Query**  
-   Create a `query.txt` file and add your Animix query data.
+4. **Configure Your Query**  
+   Create a file named `query.txt` and add your Animix query data.
 
 5. **Set Up Proxy (Optional)**  
-   To use a proxy, create a `proxy.txt` file and add proxies in the format:
+   If you wish to use a proxy, create a `proxy.txt` file and add your proxies in the following format:
 
    ```
    http://username:password@ip:port
    ```
 
-   - Only HTTP and HTTPS proxies are supported.
+   > **Note:** Only HTTP and HTTPS proxies are supported.
 
 6. **Run the Bot**  
-   Execute the bot using the following command:
+   Execute the bot with the following command:
    ```bash
    python main.py
    ```
 
 ---
 
-### 🔹 Want Free Proxies? You can obtain free proxies from [Webshare.io](https://www.webshare.io/).
+### 🔹 Need Free Proxies?
+
+You can obtain free proxies from [Webshare.io](https://www.webshare.io/).
 
 ---
 
-## 🛠️ **Contributing**
+## 🛠️ Contributing
 
-This project is developed by **Livexords**. If you have suggestions, questions, or would like to contribute, feel free to contact us:
+This project is developed by **Livexords**. If you have suggestions, questions, or would like to contribute, please reach out:
 
 <div align="center">
   <a href="https://t.me/livexordsscript" target="_blank">
-    <img src="https://img.shields.io/static/v1?message=Livexords&logo=telegram&label=&color=2CA5E0&logoColor=white&labelColor=&style=for-the-badge" height="25" alt="telegram logo" />
+    <img src="https://img.shields.io/static/v1?message=Livexords&logo=telegram&label=&color=2CA5E0&logoColor=white&style=for-the-badge" height="25" alt="Telegram Logo" />
   </a>
 </div>
 

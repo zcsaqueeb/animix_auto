@@ -1,10 +1,17 @@
 from datetime import datetime
-import json
 import time
 from colorama import Fore
 import requests
 import random
-
+from fake_useragent import UserAgent
+import asyncio
+import json
+import gzip
+import brotli
+import zlib
+import chardet
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 class animix:
 
@@ -39,6 +46,69 @@ class animix:
         }
         self.proxy_session = None
         self.config = self.load_config()
+        self.session = self.sessions()
+        
+    def sessions(self):
+        session = requests.Session()
+        retries = Retry(total=3,
+                        backoff_factor=1,
+                        status_forcelist=[500, 502, 503, 504, 520])
+        session.mount('https://', HTTPAdapter(max_retries=retries))
+        return session
+    
+    def decode_response(self, response):
+        """
+        Mendekode response dari server secara umum.
+
+        Parameter:
+            response: objek requests.Response
+
+        Mengembalikan:
+            - Jika Content-Type mengandung 'application/json', maka mengembalikan objek Python (dict atau list) hasil parsing JSON.
+            - Jika bukan JSON, maka mengembalikan string hasil decode.
+        """
+        # Ambil header
+        content_encoding = response.headers.get('Content-Encoding', '').lower()
+        content_type = response.headers.get('Content-Type', '').lower()
+
+        # Tentukan charset dari Content-Type, default ke utf-8
+        charset = 'utf-8'
+        if 'charset=' in content_type:
+            charset = content_type.split('charset=')[-1].split(';')[0].strip()
+
+        # Ambil data mentah
+        data = response.content
+
+        # Dekompresi jika perlu
+        try:
+            if content_encoding == 'gzip':
+                data = gzip.decompress(data)
+            elif content_encoding in ['br', 'brotli']:
+                data = brotli.decompress(data)
+            elif content_encoding in ['deflate', 'zlib']:
+                data = zlib.decompress(data)
+        except Exception:
+            # Jika dekompresi gagal, lanjutkan dengan data asli
+            pass
+
+        # Coba decode menggunakan charset yang didapat
+        try:
+            text = data.decode(charset)
+        except Exception:
+            # Fallback: deteksi encoding dengan chardet
+            detection = chardet.detect(data)
+            detected_encoding = detection.get("encoding", "utf-8")
+            text = data.decode(detected_encoding, errors='replace')
+
+        # Jika konten berupa JSON, kembalikan hasil parsing JSON
+        if 'application/json' in content_type:
+            try:
+                return json.loads(text)
+            except Exception:
+                # Jika parsing JSON gagal, kembalikan string hasil decode
+                return text
+        else:
+            return text
 
     def banner(self) -> None:
         """Displays the banner for the bot."""
@@ -110,7 +180,7 @@ class animix:
             self.log("📡 Sending request to fetch user information...", Fore.CYAN)
             response = requests.get(req_url, headers=headers)
             response.raise_for_status()
-            data = response.json()
+            data = self.decode_response(response)
 
             if "result" in data:
                 user_info = data["result"]
@@ -230,7 +300,7 @@ class animix:
                 if bonus_response_reg is None or bonus_response_reg.status_code != 200:
                     self.log("⚠️ Failed to retrieve regular bonus data.", Fore.YELLOW)
                 else:
-                    bonus_data_reg = bonus_response_reg.json() if bonus_response_reg.text else {}
+                    bonus_data_reg = self.decode_response(bonus_response_reg) if bonus_response_reg.text else {}
                     if bonus_data_reg and "result" in bonus_data_reg:
                         bonus_result = bonus_data_reg["result"]
                         current_step = bonus_result.get("current_step", 0)
@@ -250,7 +320,7 @@ class animix:
                                     if response is None or response.status_code != 200:
                                         self.log("⚠️ Invalid response from regular gacha spin. Skipping spin.", Fore.YELLOW)
                                         continue
-                                    data = response.json() if response.text else {}
+                                    data = self.decode_response(response) if response.text else {}
                                     if not data:
                                         self.log("⚠️ Empty JSON response from regular gacha spin.", Fore.YELLOW)
                                         continue
@@ -296,7 +366,7 @@ class animix:
                 if bonus_response is None or bonus_response.status_code != 200:
                     self.log("⚠️ Failed to retrieve super bonus data.", Fore.YELLOW)
                 else:
-                    bonus_data = bonus_response.json() if bonus_response.text else {}
+                    bonus_data = self.decode_response(bonus_response) if bonus_response.text else {}
                     if bonus_data and "result" in bonus_data:
                         bonus_result = bonus_data["result"]
                         current_step = bonus_result.get("current_step", 0)
@@ -316,7 +386,7 @@ class animix:
                                     if response is None or response.status_code != 200:
                                         self.log("⚠️ Invalid response from super gacha spin. Skipping spin.", Fore.YELLOW)
                                         continue
-                                    data = response.json() if response.text else {}
+                                    data = self.decode_response(response) if response.text else {}
                                     if not data:
                                         self.log("⚠️ Empty JSON response from super gacha spin.", Fore.YELLOW)
                                         continue
@@ -360,7 +430,7 @@ class animix:
             if bonus_response_reg is None or bonus_response_reg.status_code != 200:
                 self.log("⚠️ Regular bonus check response is invalid.", Fore.YELLOW)
             else:
-                bonus_data_reg = bonus_response_reg.json() if bonus_response_reg.text else {}
+                bonus_data_reg = self.decode_response(bonus_response_reg) if bonus_response_reg.text else {}
                 if bonus_data_reg and "result" in bonus_data_reg:
                     bonus_result = bonus_data_reg["result"]
                     current_step = bonus_result.get("current_step", 0)
@@ -380,7 +450,7 @@ class animix:
                                 if claim_response is None or claim_response.status_code != 200:
                                     self.log(f"⚠️ Invalid response for regular bonus reward {reward_no}.", Fore.YELLOW)
                                     continue
-                                claim_data = claim_response.json() if claim_response.text else {}
+                                claim_data = self.decode_response(claim_response) if claim_response.text else {}
                                 if claim_data.get("error_code") is None:
                                     result = claim_data.get("result", {})
                                     name = result.get("name", "Unknown")
@@ -409,7 +479,7 @@ class animix:
             if bonus_response_super is None or bonus_response_super.status_code != 200:
                 self.log("⚠️ Super bonus check response is invalid.", Fore.YELLOW)
             else:
-                bonus_data_super = bonus_response_super.json() if bonus_response_super.text else {}
+                bonus_data_super = self.decode_response(bonus_response_super) if bonus_response_super.text else {}
                 if bonus_data_super and "result" in bonus_data_super:
                     bonus_result = bonus_data_super["result"]
                     current_step = bonus_result.get("current_step", 0)
@@ -429,7 +499,7 @@ class animix:
                                 if claim_response is None or claim_response.status_code != 200:
                                     self.log(f"⚠️ Invalid response for super bonus reward {reward_no}.", Fore.YELLOW)
                                     continue
-                                claim_data = claim_response.json() if claim_response.text else {}
+                                claim_data = self.decode_response(claim_response) if claim_response.text else {}
                                 if claim_data.get("error_code") is None:
                                     result = claim_data.get("result", {})
                                     name = result.get("name", "Unknown")
@@ -458,7 +528,7 @@ class animix:
         try:
             response = requests.get(req_url, headers=headers)
             response.raise_for_status()
-            data = response.json()
+            data = self.decode_response(response)
             if "result" in data:
                 user_info = data["result"]
                 inventory = user_info.get("inventory", [])
@@ -495,7 +565,7 @@ class animix:
         try:
             response = requests.get(req_url, headers=headers, timeout=10)
             response.raise_for_status()
-            data = response.json()
+            data = self.decode_response(response)
 
             dna_list = []
             if "result" in data and isinstance(data["result"], list):
@@ -590,7 +660,7 @@ class animix:
                             try:
                                 mix_response = requests.post(mix_url, headers=headers, json=payload, timeout=10)
                                 if mix_response.status_code == 200:
-                                    mix_data = mix_response.json()
+                                    mix_data = self.decode_response(mix_response)
                                     if "result" in mix_data and "pet" in mix_data["result"]:
                                         pet_info = mix_data["result"]["pet"]
                                         self.log(
@@ -639,7 +709,7 @@ class animix:
                             try:
                                 mix_response = requests.post(mix_url, headers=headers, json=payload, timeout=10)
                                 if mix_response.status_code == 200:
-                                    mix_data = mix_response.json()
+                                    mix_data = self.decode_response(mix_response)
                                     if "result" in mix_data and "pet" in mix_data["result"]:
                                         pet_info = mix_data["result"]["pet"]
                                         self.log(
@@ -680,7 +750,7 @@ class animix:
             self.log("⏳ Fetching the list of achievements...", Fore.CYAN)
             response = requests.get(req_url_list, headers=headers)
             response.raise_for_status()
-            data = response.json()
+            data = self.decode_response(response)
 
             if "result" in data and isinstance(data["result"], dict):
                 for achievement_type, achievement_data in data["result"].items():
@@ -717,7 +787,7 @@ class animix:
                     req_url_claim, headers=headers, json={"quest_id": quest_id}
                 )
                 response.raise_for_status()
-                claim_result = response.json()
+                claim_result = self.decode_response(response)
 
                 if claim_result.get("error_code") is None:
                     self.log(
@@ -756,7 +826,7 @@ class animix:
             self.log("🔄 Fetching the current mission list...", Fore.CYAN)
             mission_response = requests.get(mission_url, headers=headers)
             mission_response.raise_for_status()
-            mission_data = mission_response.json()
+            mission_data = self.decode_response(mission_response)
             missions = mission_data.get("result", [])
             if not isinstance(missions, list):
                 self.log("❌ Invalid mission data format (expected a list).", Fore.RED)
@@ -817,7 +887,7 @@ class animix:
             self.log("🔄 Fetching the list of pets...", Fore.CYAN)
             pet_response = requests.get(pet_url, headers=headers)
             pet_response.raise_for_status()
-            pet_data = pet_response.json()
+            pet_data = self.decode_response(pet_response)
             pets = pet_data.get("result", [])
             if not isinstance(pets, list):
                 self.log("❌ Invalid pet data format (expected a list).", Fore.RED)
@@ -917,7 +987,7 @@ class animix:
             quest_response.raise_for_status()
 
             try:
-                quest_data = quest_response.json()
+                quest_data = self.decode_response(quest_response)
             except ValueError:
                 self.log("❌ Quest response is not valid JSON.", Fore.RED)
                 return
@@ -979,7 +1049,8 @@ class animix:
             pass_response.raise_for_status()
 
             try:
-                passes = pass_response.json().get("result", [])
+                passe = self.decode_response(pass_response)
+                passes = passe.get("result", [])
             except ValueError:
                 self.log("❌ Season pass response is not valid JSON.", Fore.RED)
                 return
@@ -1105,7 +1176,7 @@ class animix:
             self.log("⚙️ Checking for pets eligible for upgrade...", Fore.CYAN)
             response = requests.get(req_url_pets, headers=headers)
             response.raise_for_status()
-            pets_data = response.json()
+            pets_data = self.decode_response(response)
 
             if "result" in pets_data and isinstance(pets_data["result"], list):
                 pets = pets_data["result"]
@@ -1121,7 +1192,7 @@ class animix:
                             json=payload,
                         )
                         response.raise_for_status()
-                        upgrade_data = response.json()
+                        upgrade_data = self.decode_response(response)
 
                         if "result" in upgrade_data and isinstance(
                             upgrade_data["result"], dict
@@ -1140,7 +1211,7 @@ class animix:
                                     req_url_upgrade, headers=headers, json=payload
                                 )
                                 response.raise_for_status()
-                                upgrade_result = response.json()
+                                upgrade_result = self.decode_response(response)
 
                                 if "result" in upgrade_result and upgrade_result[
                                     "result"
@@ -1191,7 +1262,7 @@ class animix:
                     # Fetch the pet list from API
                     response = requests.get(req_url_pets, headers=headers)
                     response.raise_for_status()
-                    pets_data = response.json()
+                    pets_data = self.decode_response(response)
                     if "result" in pets_data and isinstance(pets_data["result"], list):
                         pets = pets_data["result"]
                         # Select 3 pets with the highest value for the given attribute
@@ -1206,7 +1277,7 @@ class animix:
                             }
                             response = requests.post(req_url_set_defense, headers=headers, json=payload)
                             response.raise_for_status()
-                            defense_result = response.json()
+                            defense_result = self.decode_response(response)
                             if "result" in defense_result and isinstance(defense_result["result"], dict):
                                 self.log("✅ Defense team successfully updated based on attribute selection!", Fore.GREEN)
                             else:
@@ -1237,7 +1308,7 @@ class animix:
                             }
                             response = requests.post(req_url_set_defense, headers=headers, json=payload)
                             response.raise_for_status()
-                            defense_result = response.json()
+                            defense_result = self.decode_response(response)
                             if "result" in defense_result and isinstance(defense_result["result"], dict):
                                 self.log("✅ Defense team successfully updated based on defense IDs!", Fore.GREEN)
                             else:
@@ -1258,7 +1329,7 @@ class animix:
                 self.log("⏳ Fetching PvP user information...", Fore.CYAN)
                 response = requests.get(req_url_info, headers=headers)
                 response.raise_for_status()
-                data = response.json()
+                data = self.decode_response(response)
 
                 if "result" in data and isinstance(data["result"], dict):
                     result = data["result"]
@@ -1290,7 +1361,7 @@ class animix:
                             payload_claim = {"season_id": unclaimed_season_id}
                             claim_response = requests.post(req_url_claim, headers=headers, json=payload_claim)
                             claim_response.raise_for_status()
-                            claim_result = claim_response.json()
+                            claim_result = self.decode_response(claim_response)
 
                             if "result" in claim_result and isinstance(claim_result["result"], dict):
                                 self.log("✅ Rewards claimed successfully!", Fore.GREEN)
@@ -1320,7 +1391,7 @@ class animix:
                     self.log("🔍 Fetching user pet list...", Fore.CYAN)
                     response = requests.get(req_url_pets, headers=headers)
                     response.raise_for_status()
-                    pets_data = response.json()
+                    pets_data = self.decode_response(response)
 
                     best_pets = []
                     if "result" in pets_data and isinstance(pets_data["result"], list):
@@ -1361,7 +1432,7 @@ class animix:
                         self.log("🎯 Tickets available. Fetching opponent information...", Fore.CYAN)
                         response = requests.get(req_url_opponents, headers=headers)
                         response.raise_for_status()
-                        opponent_data = response.json()
+                        opponent_data = self.decode_response(response)
 
                         if "result" in opponent_data and isinstance(opponent_data["result"], dict):
                             opponent = opponent_data["result"].get("opponent", {})
@@ -1492,7 +1563,7 @@ class animix:
                                 }
                                 response = requests.post(req_url_attack, headers=headers, json=payload)
                                 response.raise_for_status()
-                                attack_result = response.json()
+                                attack_result = self.decode_response(response)
 
                                 if "result" in attack_result and isinstance(attack_result["result"], dict):
                                     result_data = attack_result["result"]
@@ -1602,6 +1673,7 @@ class animix:
         return self.proxy_session
 
     def override_requests(self):
+        import random
         """Override requests functions globally when proxy is enabled."""
         if self.config.get("proxy", False):
             self.log("[CONFIG] 🛡️ Proxy: ✅ Enabled", Fore.YELLOW)
@@ -1622,75 +1694,90 @@ class animix:
             requests.delete = self._original_requests["delete"]
 
 
-if __name__ == "__main__":
-    ani = animix()
-    index = 0
-    max_index = len(ani.query_list)
+async def process_account(account, original_index, account_label, ani, config):
+    # Menampilkan informasi akun
+    display_account = account[:10] + "..." if len(account) > 10 else account
+    ani.log(f"👤 Processing {account_label}: {display_account}", Fore.YELLOW)
+    
+    # Override proxy jika diaktifkan
+    if config.get("proxy", False):
+        ani.override_requests()
+    else:
+        ani.log("[CONFIG] Proxy: ❌ Disabled", Fore.RED)
+    
+    # Login (fungsi blocking, dijalankan di thread terpisah) dengan menggunakan index asli (integer)
+    await asyncio.to_thread(ani.login, original_index)
+    
+    ani.log("🛠️ Starting task execution...", Fore.CYAN)
+    tasks_config = {
+       "achievements": "🏆 Achievements",
+        "mission": "📜 Missions",
+        "quest": "🗺️ Quests",
+        "gacha": "🎰 Gacha",
+        "mix": "🧬 DNA Mixing",
+        "claim_pass": "🎟️ Claiming Pass Rewards",
+        "pvp": "⚔️ PvP Battles",
+    }
+    
+    for task_key, task_name in tasks_config.items():
+        task_status = config.get(task_key, False)
+        color = Fore.YELLOW if task_status else Fore.RED
+        ani.log(f"[CONFIG] {task_name}: {'✅ Enabled' if task_status else '❌ Disabled'}", color)
+        if task_status:
+            ani.log(f"🔄 Executing {task_name}...", Fore.CYAN)
+            await asyncio.to_thread(getattr(ani, task_key))
+    
+    delay_switch = config.get("delay_account_switch", 10)
+    ani.log(f"➡️ Finished processing {account_label}. Waiting {Fore.WHITE}{delay_switch}{Fore.CYAN} seconds before next account.", Fore.CYAN)
+    await asyncio.sleep(delay_switch)
+
+async def worker(worker_id, ani, config, queue):
+    """
+    Setiap worker akan mengambil satu akun dari antrian dan memprosesnya secara berurutan.
+    Worker tidak akan mengambil akun baru sebelum akun sebelumnya selesai diproses.
+    """
+    while True:
+        try:
+            original_index, account = queue.get_nowait()
+        except asyncio.QueueEmpty:
+            break
+        account_label = f"Worker-{worker_id} Account-{original_index+1}"
+        await process_account(account, original_index, account_label, ani, config)
+        queue.task_done()
+    ani.log(f"Worker-{worker_id} finished processing all assigned accounts.", Fore.CYAN)
+
+async def main():
+    ani = animix()  # Inisialisasi instance class animix Anda
     config = ani.load_config()
+    all_accounts = ani.query_list
+    num_threads = config.get("thread", 1)  # Jumlah worker sesuai konfigurasi
+    
     if config.get("proxy", False):
         proxies = ani.load_proxies()
-
-    ani.log(
-        "🎉 [LIVEXORDS] === Welcome to AniMix Automation === [LIVEXORDS]", Fore.YELLOW
-    )
-    ani.log(f"📂 Loaded {max_index} accounts from query list.", Fore.YELLOW)
-
+    
+    ani.log("🎉 [LIVEXORDS] === Welcome to Animix Automation === [LIVEXORDS]", Fore.YELLOW)
+    ani.log(f"📂 Loaded {len(all_accounts)} accounts from query list.", Fore.YELLOW)
+    
     while True:
-        # Format current_account: Show only the first 10 characters, rest hidden
-        current_account = ani.query_list[index]
-        display_account = (
-            current_account[:10] + "..."
-            if len(current_account) > 10
-            else current_account
-        )
+        # Buat queue baru dan masukkan semua akun (dengan index asli)
+        queue = asyncio.Queue()
+        for idx, account in enumerate(all_accounts):
+            queue.put_nowait((idx, account))
+        
+        # Buat task worker sesuai dengan jumlah thread yang diinginkan
+        workers = [asyncio.create_task(worker(i+1, ani, config, queue)) for i in range(num_threads)]
+        
+        # Tunggu hingga semua akun di queue telah diproses
+        await queue.join()
+        
+        # Opsional: batalkan task worker (agar tidak terjadi tumpang tindih)
+        for w in workers:
+            w.cancel()
+        
+        ani.log("🔁 All accounts processed. Restarting loop.", Fore.CYAN)
+        delay_loop = config.get("delay_loop", 30)
+        ani.log(f"⏳ Sleeping for {Fore.WHITE}{delay_loop}{Fore.CYAN} seconds before restarting.", Fore.CYAN)
+        await asyncio.sleep(delay_loop)
 
-        ani.log(
-            f"👤 [ACCOUNT] Processing account {index + 1}/{max_index}: {display_account}",
-            Fore.YELLOW,
-        )
-
-        if config.get("proxy", False):
-            ani.override_requests()
-        else:
-            ani.log("[CONFIG] Proxy: ❌ Disabled", Fore.RED)
-
-        # Perform login for the current account
-        ani.login(index)
-
-        # Task execution with clear log messages
-        ani.log("🛠️ Starting task execution...")
-        tasks = {
-            "achievements": "🏆 Achievements",
-            "mission": "📜 Missions",
-            "quest": "🗺️ Quests",
-            "gacha": "🎰 Gacha",
-            "mix": "🧬 DNA Mixing",
-            "claim_pass": "🎟️ Claiming Pass Rewards",
-            "pvp": "⚔️ PvP Battles",
-        }
-
-        for task_key, task_name in tasks.items():
-            task_status = config.get(task_key, False)
-            ani.log(
-                f"[CONFIG] {task_name}: {'✅ Enabled' if task_status else '❌ Disabled'}",
-                Fore.YELLOW if task_status else Fore.RED,
-            )
-
-            if task_status:
-                ani.log(f"🔄 Executing {task_name}...")
-                getattr(ani, task_key)()
-
-        # Handle account switching and loop delay
-        if index == max_index - 1:
-            ani.log("🔁 All accounts processed. Restarting loop.")
-            ani.log(
-                f"⏳ Sleeping for {config.get('delay_loop', 30)} seconds before restarting."
-            )
-            time.sleep(config.get("delay_loop", 30))
-            index = 0
-        else:
-            ani.log(
-                f"➡️ Switching to the next account in {config.get('delay_account_switch', 10)} seconds."
-            )
-            time.sleep(config.get("delay_account_switch", 10))
-            index += 1
+if __name__ == "__main__":
+    asyncio.run(main())
