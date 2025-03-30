@@ -353,8 +353,103 @@ class animix:
         else:
             self.log("🚫 No super tokens available for gacha.", Fore.RED)
 
-        # BONUS CLAIM PROCESS (berjalan terpisah)
-        # ... (logika bonus claim tetap terpisah dari proses gacha)
+        # BONUS CLAIM: REGULAR GACHA BONUS
+        try:
+            bonus_check_url_reg = f"{self.BASE_URL}pet/dna/gacha/bonus?is_super=False"
+            bonus_response_reg = requests.get(bonus_check_url_reg, headers=headers)
+            if bonus_response_reg is None or bonus_response_reg.status_code != 200:
+                self.log("⚠️ Regular bonus check response is invalid.", Fore.YELLOW)
+            else:
+                bonus_data_reg = bonus_response_reg.json() if bonus_response_reg.text else {}
+                if bonus_data_reg and "result" in bonus_data_reg:
+                    bonus_result = bonus_data_reg["result"]
+                    current_step = bonus_result.get("current_step", 0)
+                    total_step = bonus_result.get("total_step", 200)
+                    if current_step >= total_step:
+                        rewards_to_claim = []
+                        if not bonus_result.get("is_claimed_god_power", False):
+                            rewards_to_claim.append(1)
+                        if not bonus_result.get("is_claimed_dna", False):
+                            rewards_to_claim.append(2)
+                        for reward_no in rewards_to_claim:
+                            claim_url = f"{self.BASE_URL}pet/dna/gacha/bonus/claim"
+                            claim_payload = {"reward_no": reward_no, "is_super": False}
+                            self.log(f"🎁 Claiming regular bonus reward {reward_no}...", Fore.CYAN)
+                            try:
+                                claim_response = requests.post(claim_url, headers=headers, json=claim_payload)
+                                if claim_response is None or claim_response.status_code != 200:
+                                    self.log(f"⚠️ Invalid response for regular bonus reward {reward_no}.", Fore.YELLOW)
+                                    continue
+                                claim_data = claim_response.json() if claim_response.text else {}
+                                if claim_data.get("error_code") is None:
+                                    result = claim_data.get("result", {})
+                                    name = result.get("name", "Unknown")
+                                    description = result.get("description", "No description")
+                                    amount = result.get("amount", 0)
+                                    self.log(f"✅ Successfully claimed regular bonus reward {reward_no}!", Fore.GREEN)
+                                    self.log(f"📦 Name: {name}", Fore.LIGHTGREEN_EX)
+                                    self.log(f"ℹ️ Description: {description}", Fore.YELLOW)
+                                    self.log(f"🔢 Amount: {amount}", Fore.MAGENTA)
+                                else:
+                                    self.log(f"⚠️ Failed to claim regular bonus reward {reward_no}: {claim_data.get('message', 'Unknown error')}", Fore.YELLOW)
+                            except Exception as e:
+                                self.log(f"❌ Error claiming regular bonus reward {reward_no}: {e}", Fore.RED)
+                                continue
+                    else:
+                        self.log("ℹ️ Regular bonus not ready to claim yet.", Fore.YELLOW)
+                else:
+                    self.log("⚠️ Regular bonus data is invalid.", Fore.YELLOW)
+        except Exception as e:
+            self.log(f"❌ Error during regular bonus claim check: {e}", Fore.RED)
+
+        # BONUS CLAIM: SUPER GACHA BONUS
+        try:
+            bonus_check_url_super = f"{self.BASE_URL}pet/dna/gacha/bonus?is_super=True"
+            bonus_response_super = requests.get(bonus_check_url_super, headers=headers)
+            if bonus_response_super is None or bonus_response_super.status_code != 200:
+                self.log("⚠️ Super bonus check response is invalid.", Fore.YELLOW)
+            else:
+                bonus_data_super = bonus_response_super.json() if bonus_response_super.text else {}
+                if bonus_data_super and "result" in bonus_data_super:
+                    bonus_result = bonus_data_super["result"]
+                    current_step = bonus_result.get("current_step", 0)
+                    total_step = bonus_result.get("total_step", 200)
+                    if current_step >= total_step:
+                        rewards_to_claim = []
+                        if not bonus_result.get("is_claimed_god_power", False):
+                            rewards_to_claim.append(1)
+                        if not bonus_result.get("is_claimed_dna", False):
+                            rewards_to_claim.append(2)
+                        for reward_no in rewards_to_claim:
+                            claim_url = f"{self.BASE_URL}pet/dna/gacha/bonus/claim"
+                            claim_payload = {"reward_no": reward_no, "is_super": True}
+                            self.log(f"🎁 Claiming super bonus reward {reward_no}...", Fore.CYAN)
+                            try:
+                                claim_response = requests.post(claim_url, headers=headers, json=claim_payload)
+                                if claim_response is None or claim_response.status_code != 200:
+                                    self.log(f"⚠️ Invalid response for super bonus reward {reward_no}.", Fore.YELLOW)
+                                    continue
+                                claim_data = claim_response.json() if claim_response.text else {}
+                                if claim_data.get("error_code") is None:
+                                    result = claim_data.get("result", {})
+                                    name = result.get("name", "Unknown")
+                                    description = result.get("description", "No description")
+                                    amount = result.get("amount", 0)
+                                    self.log(f"✅ Successfully claimed super bonus reward {reward_no}!", Fore.GREEN)
+                                    self.log(f"📦 Name: {name}", Fore.LIGHTGREEN_EX)
+                                    self.log(f"ℹ️ Description: {description}", Fore.YELLOW)
+                                    self.log(f"🔢 Amount: {amount}", Fore.MAGENTA)
+                                else:
+                                    self.log(f"⚠️ Failed to claim super bonus reward {reward_no}: {claim_data.get('message', 'Unknown error')}", Fore.YELLOW)
+                            except Exception as e:
+                                self.log(f"❌ Error claiming super bonus reward {reward_no}: {e}", Fore.RED)
+                                continue
+                    else:
+                        self.log("ℹ️ Super bonus not ready to claim yet.", Fore.YELLOW)
+                else:
+                    self.log("⚠️ Super bonus data is invalid.", Fore.YELLOW)
+        except Exception as e:
+            self.log(f"❌ Error during super bonus claim check: {e}", Fore.RED)
         
         # REFRESH TOKENS
         time.sleep(1)

@@ -24,15 +24,12 @@ With this bot, you can save time and maximize your outcomes without manual inter
 
 ---
 
-## 🌟 Version v1.2.9
+## 🌟 Version v1.3.0
 
 ### Updates
 
 - **Gacha System Optimization:**  
   The gacha process has been optimized for improved efficiency and reliability. Various enhancements have been implemented to ensure smoother operation and better performance during gacha spins.
-
-- **Removal of Tier Champion Limitation:**  
-  The previous limitation for Tier Champion has been removed. Users can now freely access Tier Champion without any restrictions.
 
 ---
 
