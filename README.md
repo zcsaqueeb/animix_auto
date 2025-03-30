@@ -174,17 +174,3 @@ Start using Animix by registering through the following link:
 ### 🔹 Need Free Proxies?
 
 You can obtain free proxies from [Webshare.io](https://www.webshare.io/).
-
----
-
-## 🛠️ Contributing
-
-This project is developed by **Livexords**. If you have suggestions, questions, or would like to contribute, please reach out:
-
-<div align="center">
-  <a href="https://t.me/livexordsscript" target="_blank">
-    <img src="https://img.shields.io/static/v1?message=Livexords&logo=telegram&label=&color=2CA5E0&logoColor=white&style=for-the-badge" height="25" alt="Telegram Logo" />
-  </a>
-</div>
-
----
